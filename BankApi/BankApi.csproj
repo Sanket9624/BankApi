@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Dto\NewFolder\**" />
+    <Compile Remove="Entities\Accounts\**" />
+    <Content Remove="Dto\NewFolder\**" />
+    <Content Remove="Entities\Accounts\**" />
+    <EmbeddedResource Remove="Dto\NewFolder\**" />
+    <EmbeddedResource Remove="Entities\Accounts\**" />
+    <None Remove="Dto\NewFolder\**" />
+    <None Remove="Entities\Accounts\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\BankDbContextFactory.cs" />
+    <Compile Remove="Dto\Request\BankManagerRequestDto.cs" />
+    <Compile Remove="Dto\Request\UserAccountDto.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="SQL\" />
+  </ItemGroup>
+
+</Project>
