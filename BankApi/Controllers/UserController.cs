@@ -1,48 +1,74 @@
-﻿using BankApi.Dto;
-using BankApi.Services.Interfaces;
+﻿using BankApi.Entities;
+using BankApi.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
-[Route("api/users")]
+[Authorize(Policy = "CustomerOnly")]
 [ApiController]
+[Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserService _bankingService;
 
-    public UserController(IUserService userService)
+    public UserController(IUserService bankingService)
     {
-        _userService = userService;
-    }
-    //[Authorize(Policy = "CustomerOnly")]
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromQuery] UserRequestDto userRequestDto)
-    {
-        var result = await _userService.RegisterUserAsync(userRequestDto);
-        return Ok(new { message = result });
+        _bankingService = bankingService;
     }
 
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto loginDto)
-
+    [HttpPost("deposit")]
+    public async Task<IActionResult> Deposit([FromBody] AmountRequestDto request)
     {
-        var token = await _userService.LoginAsync(loginDto);
-        return Ok(new { token });
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+
+        var result = await _bankingService.DepositAsync(userId, request.Amount);
+        return result ? Ok(new { Message = "Deposit successful" }) : BadRequest(new { Message = "Deposit failed" });
     }
 
-    //[Authorize(Policy = "CustomerOnly")]
-    [HttpGet("me")]
-    public async Task<IActionResult> GetUser()
+    [HttpPost("withdraw")]
+    public async Task<IActionResult> Withdraw([FromBody] AmountRequestDto request)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        var user = await _userService.GetUserByIdAsync(userId);
-        if (user == null)
-        {
-            return NotFound(new { message = "User not found" });
-        }
-        return Ok(user);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+
+        var result = await _bankingService.WithdrawAsync(userId, request.Amount);
+        return result ? Ok(new { Message = "Withdrawal successful" }) : BadRequest(new { Message = "Insufficient balance" });
     }
+
+    [HttpPost("transfer")]
+    public async Task<IActionResult> Transfer([FromBody] TransferRequestDto request)
+    {
+        var senderUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+
+        var result = await _bankingService.TransferAsync(senderUserId, request.ReceiverAccountNumber, request.Amount);
+        return result ? Ok(new { Message = "Transfer successful" }) : BadRequest(new { Message = "Transfer failed" });
+    }
+
+    [HttpGet("balance")]
+    public async Task<IActionResult> GetBalance()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+
+        var balanceDto = await _bankingService.GetBalanceAsync(userId);
+        return Ok(balanceDto);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetTransactionHistory()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        var transactions = await _bankingService.GetTransactionHistoryAsync(userId);
+        return Ok(transactions);
+    }
+
+    [HttpGet("customTransactions")]
+    public async Task<IActionResult> GetCustomTransactionHistory(DateTime? startDate, DateTime? endDate, TransactionType? type)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        var transactions = await _bankingService.GetCustomTransactionHistoryAsync(userId, startDate, endDate, type);
+        return Ok(transactions);
+    }
+
 
 }

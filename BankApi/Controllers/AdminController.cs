@@ -1,4 +1,5 @@
 ﻿using BankApi.Dto;
+using BankApi.Dto.Request;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace BankApi.Controllers
 {
-    [Authorize(Policy = "SuperAdminOnly")]
     [ApiController]
     [Route("api/admin")]
     public class AdminController : ControllerBase
@@ -18,6 +18,7 @@ namespace BankApi.Controllers
             _adminService = adminService;
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpGet("superadmin")]
         public async Task<IActionResult> GetAdmin()
         {
@@ -26,6 +27,7 @@ namespace BankApi.Controllers
             return Ok(admin);
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPost("roles")]
         public async Task<IActionResult> CreateRole([FromBody] RoleRequestDto roleRequestDto)
         {
@@ -36,6 +38,7 @@ namespace BankApi.Controllers
             return CreatedAtAction(nameof(GetRoles), new { roleName = role.RoleName }, role);
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpGet("roles")]
         public async Task<IActionResult> GetRoles()
         {
@@ -43,6 +46,7 @@ namespace BankApi.Controllers
             return Ok(roles);
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpDelete("roles/{roleId}")]
         public async Task<IActionResult> DeleteRole(int roleId)
         {
@@ -52,6 +56,7 @@ namespace BankApi.Controllers
             return Ok($"RoleId {roleId} Deleted Succesfully");
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPost("bank-managers")]
         public async Task<IActionResult> CreateBankManager([FromBody] BankManagerDto bankManagerDto)
         {
@@ -61,17 +66,7 @@ namespace BankApi.Controllers
             return Ok($"Manager Created Succesfully. UserName : {bankManagerDto.Email}");
         }
 
-        [HttpPut("bank-managers/{userId}")]
-        public async Task<IActionResult> UpdateBankManager(int userId , [FromBody] BankManagerDto bankManagerDto)
-        {
-            if (bankManagerDto == null) return BadRequest(new { Message = "Invalid data." });
-
-            var updatedManager = await _adminService.UpdateBankManagerAsync(userId , bankManagerDto);
-            if (updatedManager == null) return NotFound(new { Message = "Bank Manager not found." });
-
-            return Ok($"Manager details Updated Succesfully. UserName : {updatedManager}");
-        }
-
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpGet("bank-managers")]
         public async Task<IActionResult> GetBankManagers()
         {
@@ -79,6 +74,7 @@ namespace BankApi.Controllers
             return Ok(managers);
         }
 
+        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpGet("users")]
          public async Task<IActionResult> GetAllUsersExceptAdmin()
             {
@@ -86,17 +82,19 @@ namespace BankApi.Controllers
                 return Ok(users);
             }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPut("users/{userId}")]
-        public async Task<IActionResult> UpdateUser(int userId ,[FromBody] UserRequestDto userRequestDto)
+        public async Task<IActionResult> UpdateUser(int userId ,[FromBody] BankMangerUpdateDto bankMangerUpdateDto)
         {
-            if (userRequestDto == null) return BadRequest(new { Message = "Invalid data." });
+            if (bankMangerUpdateDto == null) return BadRequest(new { Message = "Invalid data." });
 
-            var updatedUser = await _adminService.UpdateUserAsync(userId, userRequestDto);
+            var updatedUser = await _adminService.UpdateUserAsync(userId, bankMangerUpdateDto);
             if (updatedUser == null) return NotFound(new { Message = "User not found." });
 
             return Ok(updatedUser);
         }
 
+        [Authorize(Policy = "SuperAdminOnly")]
         [HttpDelete("users/{userId}")]
         public async Task<IActionResult> DeleteUser(int userId)
         {

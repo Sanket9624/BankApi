@@ -1,5 +1,5 @@
 ﻿using BankApi.Dto;
-using BankApi.Entities;
+using BankApi.Dto.Request;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,15 +7,21 @@ namespace BankApi.Services.Interfaces
 {
     public interface IAdminService
     {
-        Task<AdminDto> GetAdminAsync();
+        // Admin
+        Task<AdminResponseDto> GetAdminAsync();
+
+        // Roles
         Task<RoleRequestDto> CreateRoleAsync(string roleName);
         Task<bool> DeleteRoleAsync(int roleId);
         Task<List<RoleResponseDto>> GetRolesAsync();
+
+        // Bank Managers
         Task<BankManagerDto> CreateBankManagerAsync(BankManagerDto bankManagerDto);
-        Task<BankManagerDto> UpdateBankManagerAsync(int userId , BankManagerDto bankManagerDto);
-        Task<List<AdminDto>> GetBankManagersAsync();
+        Task<List<AdminResponseDto>> GetBankManagersAsync();
+
+        // Users
         Task<List<UserResponseDto>> GetAllUsersExceptAdminAsync();
-        Task<UserRequestDto> UpdateUserAsync(int userID , UserRequestDto userRequestDto);
+        Task<BankMangerUpdateDto> UpdateUserAsync(int userId, BankMangerUpdateDto bankMangerUpdateDto);
         Task<bool> DeleteUserAsync(int userId);
     }
 }

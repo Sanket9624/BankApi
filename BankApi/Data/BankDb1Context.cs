@@ -9,8 +9,6 @@ namespace BankApi.Data
         {
 
         }
-        
-
         public DbSet<Users> Users{ get; set; }
         public DbSet<RoleMaster> RoleMaster { get; set; }
         public DbSet<Account> Account { get; set; }

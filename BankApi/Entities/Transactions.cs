@@ -16,10 +16,10 @@ namespace BankApi.Entities
     {
         [Key]
         public int TransactionId { get; set; }
-        public int? SenderAccountId { get; set; }  // Nullable for deposits
-        public int? ReceiverAccountId { get; set; } // Nullable for withdrawals
+        public int? SenderAccountId { get; set; }  
+        public int? ReceiverAccountId { get; set; } 
 
-        [Column(TypeName = "nvarchar(10)")] // Store Enum as String
+        [Column(TypeName = "nvarchar(10)")] 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public TransactionType Type { get; set; }
         public decimal Amount { get; set; }

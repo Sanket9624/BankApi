@@ -1,12 +1,13 @@
-﻿using BankApi.Dto;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using BankApi.Entities;
 
-namespace BankApi.Services.Interfaces
+public interface IUserService
 {
-    public interface IUserService
-    {
-        Task<string> RegisterUserAsync(UserRequestDto ususerRequestDto);
-        Task<string> LoginAsync(LoginDto loginDto);
-        Task<UserWithAccountDto> GetUserByIdAsync(int userId);
-    }
+    Task<bool> DepositAsync(int userId, decimal amount);
+    Task<bool> WithdrawAsync(int userId, decimal amount);
+    Task<bool> TransferAsync(int userId, string receiverAccountNumber, decimal amount);
+    Task<BalanceDto> GetBalanceAsync(int userId);
+    Task<List<TransactionDto>> GetTransactionHistoryAsync(int userId);
+    Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type);
 }

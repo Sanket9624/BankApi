@@ -1,13 +1,10 @@
-﻿using AutoMapper;
-using BankApi.Data;
-using BankApi.Dto;
+﻿using BankApi.Data;
+using BankApi.Dto.Request;
 using BankApi.Entities;
 using BankApi.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BankApi.Repositories
@@ -15,135 +12,96 @@ namespace BankApi.Repositories
     public class AdminRepository : IAdminRepository
     {
         private readonly BankDb1Context _context;
-        private readonly IMapper _mapper;
 
-        public AdminRepository(BankDb1Context context, IMapper mapper)
+        public AdminRepository(BankDb1Context context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
-        public async Task<AdminDto> GetAdminAsync()
+        public async Task<Users> GetAdminAsync()
         {
-            var admin = await _context.Users
+            return await _context.Users
                 .Include(u => u.RoleMaster)
                 .FirstOrDefaultAsync(u => u.RoleMaster.RoleName == "SuperAdmin");
-
-            return _mapper.Map<AdminDto>(admin);
         }
 
-        public async Task<RoleRequestDto> CreateRoleAsync(string roleName)
+        public async Task<RoleMaster> CreateRoleAsync(RoleMaster role)
         {
-            var role = new RoleMaster { RoleName = roleName };
             _context.RoleMaster.Add(role);
             await _context.SaveChangesAsync();
-            return _mapper.Map<RoleRequestDto>(role);
+            return role;
         }
 
         public async Task<bool> DeleteRoleAsync(int roleId)
         {
             var role = await _context.RoleMaster.FindAsync(roleId);
-            if (role == null || roleId == 1 || roleId == 2) return false;
+            if (role == null || roleId <= 2) return false; // Prevent deletion of essential roles.
+
             _context.RoleMaster.Remove(role);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<List<RoleResponseDto>> GetRolesAsync()
+        public async Task<List<RoleMaster>> GetRolesAsync()
         {
-            var roles = await _context.RoleMaster.ToListAsync();
-            return _mapper.Map<List<RoleResponseDto>>(roles);
+            return await _context.RoleMaster.ToListAsync();
         }
 
-        public async Task<BankManagerDto> CreateBankManagerAsync(BankManagerDto bankManagerDto)
+        public async Task<Users> CreateBankManagerAsync(Users bankManager)
         {
-            // Fetch the role based on RoleName
-            var role = await _context.RoleMaster.FirstOrDefaultAsync(r => r.RoleName == bankManagerDto.RoleName);
-
-            if (role == null)
-            {
-                throw new Exception("Role not found.");
-            }
-
-            var bankManager = _mapper.Map<Users>(bankManagerDto);
-            bankManager.PasswordHash = HashPassword(bankManagerDto.Password);
-            bankManager.RoleId = role.RoleId; // Assign Role ID dynamically
-
-            _context.Users.Add(bankManager);
+            _context.Users.AddAsync(bankManager);
             await _context.SaveChangesAsync();
-
-            return _mapper.Map<BankManagerDto>(bankManager);
+            return bankManager;
         }
 
-        private string HashPassword(string password)
+
+        public async Task<List<Users>> GetBankManagersAsync()
         {
-            using var sha256 = SHA256.Create();
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashedBytes);
-        }
-
-        public async Task<BankManagerDto> UpdateBankManagerAsync(int userId , BankManagerDto bankManagerDto)
-        {
-            var existingUser = await _context.Users.FindAsync(userId);
-            if (existingUser == null || existingUser.RoleId != 2) return null;
-
-              
-            // Update user details
-            _mapper.Map(bankManagerDto, existingUser);
-
-            await _context.SaveChangesAsync();
-
-            return _mapper.Map<BankManagerDto>(existingUser);
-        }
-
-        public async Task<List<AdminDto>> GetBankManagersAsync()
-        {
-            var bankManagers = await _context.Users
+            return await _context.Users
                 .Where(u => u.RoleId == 2)
-                .ToListAsync();
-
-            return _mapper.Map<List<AdminDto>>(bankManagers);
-        }
-        public async Task<List<UserResponseDto>> GetAllUsersExceptAdminAsync()
-        {
-            var users = await _context.Users
-                .Where(u => u.RoleId != 1)
                 .Include(u => u.RoleMaster)
                 .ToListAsync();
-
-            return _mapper.Map<List<UserResponseDto>>(users);
         }
 
-        public async Task<UserRequestDto> UpdateUserAsync(int userId, UserRequestDto userRequestDto)
+        public async Task<List<Users>> GetAllUsersExceptAdminAsync()
         {
-            using var transaction = await _context.Database.BeginTransactionAsync(); // Begin Transaction
-            try
-            {
-                var existingUser = await _context.Users.FindAsync(userId);
-                if (existingUser == null || existingUser.RoleId == 1) return null; // Ensure Admins can't be modified
 
 
-                // Update User
-                _mapper.Map(userRequestDto, existingUser);
-                await _context.SaveChangesAsync();
+            return await _context.Users
+                .Where(u => u.RoleId == 3)
+                .Include(u => u.RoleMaster)
+                .ToListAsync();
+        }
 
-                // Update Account Type in the Accounts Table
-                var existingAccount = await _context.Account.FirstOrDefaultAsync(a => a.UserId == userId);
-                if (existingAccount != null)
-                {
-                    existingAccount.AccountType = userRequestDto.AccountType; // Update the account type
-                    await _context.SaveChangesAsync();
-                }
+        public async Task<Users> UpdateUserAsync(int userId, BankMangerUpdateDto dto)
+        {
+            var existingUser = await _context.Users.FindAsync(userId);
+            if (existingUser == null || existingUser.RoleId == 1) return null;
 
-                await transaction.CommitAsync(); // Commit transaction if both updates succeed
+            // Update only specified fields
+            existingUser.FirstName = dto.FirstName ?? existingUser.FirstName;
+            existingUser.LastName = dto.LastName ?? existingUser.LastName;
+            existingUser.MobileNo = dto.MobileNo ?? existingUser.MobileNo;
+            existingUser.Address = dto.Address ?? existingUser.Address;
 
-                return _mapper.Map<UserRequestDto>(existingUser);
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync(); // Rollback if an error occurs
-                throw;
-            }
+            await _context.SaveChangesAsync();
+            return existingUser;
+        }
+
+        public async Task<Account> GetAccountByUserIdAsync(int userId)
+        {
+            return await _context.Account.FirstOrDefaultAsync(a => a.UserId == userId);
+        }
+        public async Task<bool> GetRoleByIdAsync(int roleId)
+        {
+            return await _context.RoleMaster.AsNoTracking()
+                .AnyAsync(r => r.RoleId == roleId);
+        }
+
+        public async Task UpdateAccountAsync(Account account)
+        {
+            _context.Account.Update(account);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<bool> DeleteUserAsync(int userId)

@@ -11,7 +11,7 @@ namespace BankApi.Dto
         public string MobileNo { get; set; }
         public string Address { get; set; }
         public DateTime DateOfBirth { get; set; }
+        public int RoleId { get; set; }
         //public int RoleId { get; set; }
-        public string RoleName { get; set; }
     }
 }

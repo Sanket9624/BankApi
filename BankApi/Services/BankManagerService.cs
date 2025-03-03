@@ -1,8 +1,6 @@
 ﻿using BankApi.Dto;
-using BankApi.Entities;
-using BankApi.Repositories;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using BankApi.Repositories.Interfaces;
+using BankApi.Services.Interfaces;
 
 namespace BankApi.Services
 {
@@ -15,17 +13,71 @@ namespace BankApi.Services
             _bankManagerRepository = bankManagerRepository;
         }
 
-        public async Task<int> GetTotalTransactionCount() => await _bankManagerRepository.GetTotalTransactionCount();
-        public async Task<IEnumerable<Transactions>> GetAllTransactions() => await _bankManagerRepository.GetAllTransactions();
-        public async Task<IEnumerable<Transactions>> GetDepositTransactions() => await _bankManagerRepository.GetDepositTransactions();
-        public async Task<IEnumerable<Transactions>> GetWithdrawTransactions() => await _bankManagerRepository.GetWithdrawTransactions();
-        public async Task<decimal> GetTotalAmountDeposited() => await _bankManagerRepository.GetTotalAmountDeposited();
-        public async Task<decimal> GetTotalAmountWithdrawn() => await _bankManagerRepository.GetTotalAmountWithdrawn();
-        public async Task<decimal> GetTotalBankBalance() => await _bankManagerRepository.GetTotalBankBalance();
-        public async Task<IEnumerable<TransactionDetails>> GetAllTransactionsWithDetails() => await _bankManagerRepository.GetAllTransactionsWithDetails();
-        public async Task<IEnumerable<UserTransactionSummary>> GetTotalAmountPerUser() => await _bankManagerRepository.GetTotalAmountPerUser();
-        public async Task<BankManagerOverview> GetBankManagerOverview() => await _bankManagerRepository.GetBankManagerOverview();
-        public async Task<IEnumerable<UserTransactionHistory>> GetUserTransactionHistory(int userId) => await _bankManagerRepository.GetUserTransactionHistory(userId);
-        public async Task<IEnumerable<AccountDetails>> GetAllAccountsWithUserDetails() => await _bankManagerRepository.GetAllAccountsWithUserDetails();
+        public async Task<BankSummaryDto> GetAllTimeBankBalanceSheet()
+        {
+            return await _bankManagerRepository.GetAllTimeBankBalanceSheet();
+        }
+
+        //public async Task<IEnumerable<TransactionResponseDto>> GetAllTransactions()
+        //{
+        //    return await _bankManagerRepository.GetAllTransactions();
+        //}
+
+        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByType(string transactionType)
+        //{
+        //    return await _bankManagerRepository.GetTransactionsByType(transactionType);
+        //}
+        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByTypeAndDateRange(string transactionType, DateTime? startDate, DateTime? endDate)
+        //{
+        //    return await _bankManagerRepository.GetTransactionsByTypeAndDateRange(transactionType, startDate, endDate);
+        //}
+
+        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByDateRange(DateTime startDate, DateTime endDate)
+        //{
+        //    return await _bankManagerRepository.GetTransactionsByDateRange(startDate, endDate);
+        //}
+
+        //public async Task<IEnumerable<TransactionResponseDto>> GetUserTransactions(int? userId, string? email)
+        //{
+        //    return await _bankManagerRepository.GetUserTransactions(userId, email);
+        //}
+
+        //public async Task<IEnumerable<TransactionResponseDto>> GetUserTransactionsByDateRange(int userId, DateTime startDate, DateTime endDate)
+        //{
+        //    return await _bankManagerRepository.GetUserTransactionsByDateRange(userId, startDate, endDate);
+        //}
+
+        public async Task<AccountDetails> GetUserAccountDetails(int userId)
+        {
+            return await _bankManagerRepository.GetUserAccountDetails(userId);
+        }
+
+        public async Task<AccountDetails> GetUserDetailsByAccountNumber(string accountNumber)
+        {
+            return await _bankManagerRepository.GetUserDetailsByAccountNumber(accountNumber);
+        }
+
+        public async Task<AccountDetails> GetUserDetailsByEmail(string email)
+        {
+            return await _bankManagerRepository.GetUserDetailsByEmail(email);
+        }
+        public async Task<AccountSummaryDto> GetTotalAccounts()
+        {
+            return await _bankManagerRepository.GetTotalAccounts();
+        }
+
+        public async Task<int> GetTotalAccountCount()
+        {
+            return await _bankManagerRepository.GetTotalAccountCount();
+        }
+        public async Task<IEnumerable<TransactionResponseDto>> GetTransactions(
+    int? userId = null,
+    string? transactionType = null,
+    DateTime? startDate = null,
+    DateTime? endDate = null)
+        {
+            return await _bankManagerRepository.GetTransactions(userId, transactionType, startDate, endDate);
+        }
+
     }
 }

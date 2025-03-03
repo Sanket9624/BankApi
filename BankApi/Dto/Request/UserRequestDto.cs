@@ -13,8 +13,6 @@ namespace BankApi.Dto
         public string MobileNo { get; set; }
         public string Address { get; set; }
         public DateTime DateOfBirth { get; set; }
-        [Column(TypeName = "nvarchar(10)")] // Store Enum as String
-        [JsonConverter(typeof(JsonStringEnumConverter))]
         public AccountType AccountType { get; set; }
     }
 

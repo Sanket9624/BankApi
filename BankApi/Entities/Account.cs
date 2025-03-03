@@ -11,8 +11,6 @@ namespace BankApi.Entities
         Current
     }
 
-
-
     public class Account
     {
         [Key]

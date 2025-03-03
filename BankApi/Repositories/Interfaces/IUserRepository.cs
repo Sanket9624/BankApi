@@ -1,12 +1,16 @@
-﻿using BankApi.Entities;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using BankApi.Entities;
 
-namespace BankApi.Repositories.Interfaces
+public interface IUserRepository
 {
-    public interface IUserRepository
-    {
-        Task<Users> GetUserByEmailAsync(string email);
-        Task<Users> GetUserByIdAsync(int userId);
-        Task<Users> CreateUserAsync(Users user);
-
-    }
+    Task<Account> GetAccountByIdAsync(int accountId);
+    Task<Users> GetUserByIdAsync(int userId);
+    Task<Account> GetAccountByNumberAsync(string accountNumber);
+    Task<bool> DepositAsync(int accountId, decimal amount);
+    Task<bool> WithdrawAsync(int accountId, decimal amount);
+    Task<bool> TransferAsync(int senderAccountId, string receiverAccountNumber, decimal amount);
+    Task<decimal> GetBalanceAsync(int accountId);
+    Task<List<Transactions>> GetTransactionHistoryAsync(int accountId);
+    Task<List<Transactions>> GetCustomeTransactionHistoryAsync(int accountId, DateTime? startDate, DateTime? endDate, TransactionType? type);
 }

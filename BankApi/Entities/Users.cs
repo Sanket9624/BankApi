@@ -40,6 +40,6 @@ namespace BankApi.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         [ForeignKey("RoleId")]
         public RoleMaster RoleMaster { get; set; }
-        public  Account Account { get; set; } // One-to-One with Account
+        public Account Account { get; set; } // One-to-One with Account
     }
 }

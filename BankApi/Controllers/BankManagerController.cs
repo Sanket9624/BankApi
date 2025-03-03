@@ -1,16 +1,11 @@
-﻿using BankApi.Services;
-using BankApi.Entities;
-using Microsoft.AspNetCore.Authorization;
+﻿using BankApi.Dto;
+using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace BankApi.Controllers
+namespace BankingManagementSystem.Controllers
 {
+    [Route("api/[controller]")]
     [ApiController]
-    [Route("api/bank-manager")]
-    //[Authorize(Policy = "SuperAdminOnly")]
-    [Authorize(Policy = "SuperAdminOrBankManager")]
     public class BankManagerController : ControllerBase
     {
         private readonly IBankManagerService _bankManagerService;
@@ -20,100 +15,197 @@ namespace BankApi.Controllers
             _bankManagerService = bankManagerService;
         }
 
-        // Get total transaction count
-        [HttpGet("total-transactions")]
-        public async Task<IActionResult> GetTotalTransactionCount()
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetBankSummary()
         {
-            var count = await _bankManagerService.GetTotalTransactionCount();
-            return Ok(new { TotalTransactions = count });
+            try
+            {
+                var summary = await _bankManagerService.GetAllTimeBankBalanceSheet();
+                if (summary == null)
+                    return NotFound("Bank summary not available.");
+
+                return Ok(summary);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while fetching the bank summary: {ex.Message}");
+            }
         }
 
-        // Get all transactions
+        //[HttpGet("all")]
+        //public async Task<IActionResult> GetAllTransactions()
+        //{
+        //    try
+        //    {
+        //        var transactions = await _bankManagerService.GetAllTransactions();
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
+        //    }
+        //}
+
+        //[HttpGet("type/{transactionType}")]
+        //public async Task<IActionResult> GetTransactionsByType(string transactionType)
+        //{
+        //    try
+        //    {
+        //        var transactions = await _bankManagerService.GetTransactionsByType(transactionType);
+        //        if (!transactions.Any())
+        //            return NotFound($"No transactions found for type '{transactionType}'.");
+
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
+        //    }
+        //}
+
+        //[HttpGet("type/{transactionType}/filter")]
+        //public async Task<IActionResult> GetTransactionsByTypeAndDateRange(string transactionType, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        //{
+        //    try
+        //    {
+        //        var transactions = await _bankManagerService.GetTransactionsByTypeAndDateRange(transactionType, startDate, endDate);
+        //        if (!transactions.Any())
+        //            return NotFound($"No transactions found for type '{transactionType}' in the specified date range.");
+
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve filtered transactions: {ex.Message}");
+        //    }
+        //}
+
+
+        //[HttpGet("date-range")]
+        //public async Task<IActionResult> GetTransactionsByDateRange(DateTime startDate, DateTime endDate)
+        //{
+        //    try
+        //    {
+        //        if (startDate > endDate)
+        //            return BadRequest("Start date must be before end date.");
+
+        //        var transactions = await _bankManagerService.GetTransactionsByDateRange(startDate, endDate);
+        //        if (!transactions.Any())
+        //            return NotFound("No transactions found for the specified date range.");
+
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
+        //    }
+        //}
+
+        //[HttpGet("user-transactions")]
+        //public async Task<IActionResult> GetUserTransactions(int? userId, string? email)
+        //{
+        //    try
+        //    {
+        //        var transactions = await _bankManagerService.GetUserTransactions(userId, email);
+        //        if (!transactions.Any())
+        //            return NotFound("No user transactions found.");
+
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve user transactions: {ex.Message}");
+        //    }
+        //}
+
+        //[HttpGet("user-date-range")]
+        //public async Task<IActionResult> GetUserTransactionsByDateRange(int userId, DateTime startDate, DateTime endDate)
+        //{
+        //    try
+        //    {
+        //        if (startDate > endDate)
+        //            return BadRequest("Start date must be before end date.");
+
+        //        var transactions = await _bankManagerService.GetUserTransactionsByDateRange(userId, startDate, endDate);
+        //        if (!transactions.Any())
+        //            return NotFound("No transactions found for the specified user and date range.");
+
+        //        return Ok(transactions);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Failed to retrieve user transactions: {ex.Message}");
+        //    }
+        //}
+
+        [HttpGet("user-account/{userId}")]
+        public async Task<IActionResult> GetUserAccountDetails(int userId)
+        {
+            try
+            {
+                var userAccount = await _bankManagerService.GetUserAccountDetails(userId);
+                if (userAccount == null)
+                    return NotFound($"No account found for user ID {userId}.");
+
+                return Ok(userAccount);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Failed to retrieve user account details: {ex.Message}");
+            }
+        }
+
+        [HttpGet("account/{accountNumber}")]
+        public async Task<IActionResult> GetUserDetailsByAccountNumber(string accountNumber)
+        {
+            try
+            {
+                var user = await _bankManagerService.GetUserDetailsByAccountNumber(accountNumber);
+                if (user == null)
+                    return NotFound($"No user found with account number '{accountNumber}'.");
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Failed to retrieve user details: {ex.Message}");
+            }
+        }
+
+        [HttpGet("email/{email}")]
+        public async Task<IActionResult> GetUserDetailsByEmail(string email)
+        {
+            try
+            {
+                var user = await _bankManagerService.GetUserDetailsByEmail(email);
+                if (user == null)
+                    return NotFound($"No user found with email '{email}'.");
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Failed to retrieve user details: {ex.Message}");
+            }
+        }
+
+      [HttpGet("total-accounts")]
+        public async Task<IActionResult> GetTotalAccounts()
+        {
+            var result = await _bankManagerService.GetTotalAccounts();
+            return Ok(result);
+        }
+
         [HttpGet("transactions")]
-        public async Task<IActionResult> GetAllTransactions()
+        public async Task<IActionResult> GetTransactions(
+        [FromQuery] int? userId = null,
+        [FromQuery] string? transactionType = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
         {
-            var transactions = await _bankManagerService.GetAllTransactions();
+            var transactions = await _bankManagerService.GetTransactions(userId, transactionType, startDate, endDate);
             return Ok(transactions);
         }
 
-        // Get deposit transactions
-        [HttpGet("transactions/deposit")]
-        public async Task<IActionResult> GetDepositTransactions()
-        {
-            var transactions = await _bankManagerService.GetDepositTransactions();
-            return Ok(transactions);
-        }
-
-        // Get withdrawal transactions
-        [HttpGet("transactions/withdraw")]
-        public async Task<IActionResult> GetWithdrawTransactions()
-        {
-            var transactions = await _bankManagerService.GetWithdrawTransactions();
-            return Ok(transactions);
-        }
-
-        // Get total deposited amount
-        [HttpGet("total-deposited")]
-        public async Task<IActionResult> GetTotalAmountDeposited()
-        {
-            var totalDeposited = await _bankManagerService.GetTotalAmountDeposited();
-            return Ok(new { TotalDeposited = totalDeposited });
-        }
-
-        // Get total withdrawn amount
-        [HttpGet("total-withdrawn")]
-        public async Task<IActionResult> GetTotalAmountWithdrawn()
-        {
-            var totalWithdrawn = await _bankManagerService.GetTotalAmountWithdrawn();
-            return Ok(new { TotalWithdrawn = totalWithdrawn });
-        }
-
-        // Get total bank balance
-        [HttpGet("total-bank-balance")]
-        public async Task<IActionResult> GetTotalBankBalance()
-        {
-            var balance = await _bankManagerService.GetTotalBankBalance();
-            return Ok(new { TotalBankBalance = balance });
-        }
-
-        // Get all transactions with details
-        [HttpGet("transactions/details")]
-        public async Task<IActionResult> GetAllTransactionsWithDetails()
-        {
-            var transactionDetails = await _bankManagerService.GetAllTransactionsWithDetails();
-            return Ok(transactionDetails);
-        }
-
-        // Get total amount per user
-        [HttpGet("transactions/total-per-user")]
-        public async Task<IActionResult> GetTotalAmountPerUser()
-        {
-            var userSummaries = await _bankManagerService.GetTotalAmountPerUser();
-            return Ok(userSummaries);
-        }
-
-        // Get bank manager overview
-        [HttpGet("overview")]
-        public async Task<IActionResult> GetBankManagerOverview()
-        {
-            var overview = await _bankManagerService.GetBankManagerOverview();
-            return Ok(overview);
-        }
-
-        // Get transaction history for a specific user
-        [HttpGet("user-transactions/{userId}")]
-        public async Task<IActionResult> GetUserTransactionHistory(int userId)
-        {
-            var transactionHistory = await _bankManagerService.GetUserTransactionHistory(userId);
-            return Ok(transactionHistory);
-        }
-
-        // Get all accounts with user details
-        [HttpGet("accounts")]
-        public async Task<IActionResult> GetAllAccountsWithUserDetails()
-        {
-            var accounts = await _bankManagerService.GetAllAccountsWithUserDetails();
-            return Ok(accounts);
-        }
     }
 }
