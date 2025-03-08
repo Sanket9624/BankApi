@@ -15,12 +15,16 @@ namespace BankApi.Services
     public class AdminService : IAdminService
     {
         private readonly IAdminRepository _adminRepository;
+        private readonly IAuthRepository _authRepository;
         private readonly IMapper _mapper;
+        private readonly IAuthService _authService;
 
-        public AdminService(IAdminRepository adminRepository, IMapper mapper)
+        public AdminService(IAdminRepository adminRepository, IMapper mapper , IAuthService authService , IAuthRepository authRepository)
         {
             _adminRepository = adminRepository;
+            _authRepository = authRepository;
             _mapper = mapper;
+            _authService = authService;
         }
 
         public async Task<AdminResponseDto> GetAdminAsync()
@@ -46,25 +50,50 @@ namespace BankApi.Services
             var roles = await _adminRepository.GetRolesAsync();
             return _mapper.Map<List<RoleResponseDto>>(roles);
         }
-
         public async Task<BankManagerDto> CreateBankManagerAsync(BankManagerDto bankManagerDto)
         {
-            // Check if the provided RoleId exists in the database
             var existingRole = await _adminRepository.GetRoleByIdAsync(bankManagerDto.RoleId);
             if (existingRole == null || bankManagerDto.RoleId == 1 || bankManagerDto.RoleId == 3)
             {
                 throw new Exception($"The role with ID '{bankManagerDto.RoleId}' does not exist.");
             }
-
+            var existingUser = await _authRepository.GetUserByEmailAsync(bankManagerDto.Email);
+            if (existingUser != null)
+            {
+                throw new Exception("User already exists");
+            }
 
             var bankManager = _mapper.Map<Users>(bankManagerDto);
             bankManager.PasswordHash = HashPassword(bankManagerDto.Password);
-            //bankManager.RoleId = 2;
+            bankManager.IsEmailVerified = false;
 
             var createdBankManager = await _adminRepository.CreateBankManagerAsync(bankManager);
+
+            // Use AuthService to Send OTP
+            await _authService.SendOtpAsync(createdBankManager.Email, createdBankManager.UserId);
+
             return _mapper.Map<BankManagerDto>(createdBankManager);
         }
+        public async Task<string> VerifyOtpAsync(string email, string otp)
+        {
+            var user = await _authRepository.GetUserByEmailAsync(email);
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
 
+            if (user.Otp != otp || user.OtpExpiry < DateTime.UtcNow)
+            {
+                throw new Exception("Invalid or expired OTP");
+            }
+
+            user.IsEmailVerified = true;
+            user.Otp = null;
+            user.OtpExpiry = null;
+            await _authRepository.UpdateUserAsync(user);
+
+            return ("Manager Created Successfully");
+        }
 
         public async Task<List<AdminResponseDto>> GetBankManagersAsync()
         {
@@ -89,7 +118,7 @@ namespace BankApi.Services
 
 
         public async Task<bool> DeleteUserAsync(int userId)
-        {
+        {   
             return await _adminRepository.DeleteUserAsync(userId);
         }
 

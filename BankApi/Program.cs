@@ -76,7 +76,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ✅ Register Repositories & Services
-builder.Services.AddScoped<BankApi.Repositories.Interfaces.IUserRepository, AuthRepository>();
+builder.Services.AddScoped<BankApi.Repositories.Interfaces.IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -85,6 +85,7 @@ builder.Services.AddScoped<IBankManagerService, BankManagerService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // ✅ Configure Database Context
 builder.Services.AddDbContext<BankDb1Context>(options =>
@@ -177,14 +178,16 @@ static void EnsureSuperAdminExists(BankDb1Context context)
             {
                 FirstName = "Super",
                 LastName = "Admin",
-                Email = "superadmin@bankapi.com",
+                Email = "superadmin@indigobook.com",
                 PasswordHash = HashPassword("Admin@123"), // Securely hash password
                 MobileNo = "9999999999",
                 Address = "Admin HQ",
                 DateOfBirth = new DateTime(1980, 1, 1),
                 RoleId = superAdminRole.RoleId,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                IsEmailVerified = true,
+                TwoFactorEnabled = true
             };
 
             context.Users.Add(newSuperAdmin);

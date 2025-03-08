@@ -40,6 +40,11 @@ namespace BankApi.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         [ForeignKey("RoleId")]
         public RoleMaster RoleMaster { get; set; }
-        public Account Account { get; set; } // One-to-One with Account
+        public Account Account { get; set; }
+        public bool IsEmailVerified { get; set; } = false; // For Registration OTP
+        public bool TwoFactorEnabled { get; set; } = false; // For 2FA
+        public string? Otp { get; set; } // Store OTP temporarily
+        public DateTime? OtpExpiry { get; set; }// One-to-One with Account
+
     }
 }

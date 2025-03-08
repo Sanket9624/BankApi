@@ -93,6 +93,25 @@ namespace BankApi.Controllers
 
             return Ok(updatedUser);
         }
+        [Authorize(Policy = "SuperAdminOnly")]
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] OtpVerificationDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Otp))
+            {
+                return BadRequest(new { Message = "Invalid OTP data." });
+            }
+
+            try
+            {
+                var result = await _adminService.VerifyOtpAsync(request.Email, request.Otp);
+                return Ok(new { Message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
 
         [Authorize(Policy = "SuperAdminOnly")]
         [HttpDelete("users/{userId}")]

@@ -21,6 +21,7 @@ namespace BankApi.Services.Interfaces
 
         // Users
         Task<List<UserResponseDto>> GetAllUsersExceptAdminAsync();
+        Task<string> VerifyOtpAsync(string email, string otp);
         Task<BankMangerUpdateDto> UpdateUserAsync(int userId, BankMangerUpdateDto bankMangerUpdateDto);
         Task<bool> DeleteUserAsync(int userId);
     }
