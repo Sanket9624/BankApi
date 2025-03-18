@@ -1,12 +1,15 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Security.Cryptography;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
 
 namespace BankApi.Entities
 {
+    public enum RequestStatus
+    {
+        Pending,
+        Approved,
+        Rejected
+    }
 
     public class Users
     {
@@ -23,7 +26,7 @@ namespace BankApi.Entities
         public string Email { get; set; }
 
         [Required]
-        public string PasswordHash { get; set; } // Now properly hashed
+        public string PasswordHash { get; set; } // Properly hashed
 
         [Required, MaxLength(15)]
         public string MobileNo { get; set; }
@@ -31,20 +34,24 @@ namespace BankApi.Entities
         [Required, MaxLength(200)]
         public string Address { get; set; }
 
-        public DateTime DateOfBirth { get; set; }
+        public DateTime DateOfBirth { get; set; } 
 
+        public AccountType AccountType { get; set; }
         [Required]
         public int RoleId { get; set; } // Linked to Role Table
-
+        public bool IsEmailVerified { get; set; } = false;
+        public bool TwoFactorEnabled { get; set; } = false;
+        public DateTime? ApprovedAt { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public string? RejectionReason { get; set; }
+        public RequestStatus RequestStatus { get; set; } = RequestStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
         [ForeignKey("RoleId")]
         public RoleMaster RoleMaster { get; set; }
         public Account Account { get; set; }
-        public bool IsEmailVerified { get; set; } = false; // For Registration OTP
-        public bool TwoFactorEnabled { get; set; } = false; // For 2FA
-        public string? Otp { get; set; } // Store OTP temporarily
-        public DateTime? OtpExpiry { get; set; }// One-to-One with Account
 
     }
 }

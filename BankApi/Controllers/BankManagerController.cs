@@ -1,10 +1,12 @@
 ﻿using BankApi.Dto;
 using BankApi.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BankingManagementSystem.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Policy = "SuperAdminOrBankManager")]
     [ApiController]
     public class BankManagerController : ControllerBase
     {
@@ -31,112 +33,6 @@ namespace BankingManagementSystem.Controllers
                 return StatusCode(500, $"An error occurred while fetching the bank summary: {ex.Message}");
             }
         }
-
-        //[HttpGet("all")]
-        //public async Task<IActionResult> GetAllTransactions()
-        //{
-        //    try
-        //    {
-        //        var transactions = await _bankManagerService.GetAllTransactions();
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
-        //    }
-        //}
-
-        //[HttpGet("type/{transactionType}")]
-        //public async Task<IActionResult> GetTransactionsByType(string transactionType)
-        //{
-        //    try
-        //    {
-        //        var transactions = await _bankManagerService.GetTransactionsByType(transactionType);
-        //        if (!transactions.Any())
-        //            return NotFound($"No transactions found for type '{transactionType}'.");
-
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
-        //    }
-        //}
-
-        //[HttpGet("type/{transactionType}/filter")]
-        //public async Task<IActionResult> GetTransactionsByTypeAndDateRange(string transactionType, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
-        //{
-        //    try
-        //    {
-        //        var transactions = await _bankManagerService.GetTransactionsByTypeAndDateRange(transactionType, startDate, endDate);
-        //        if (!transactions.Any())
-        //            return NotFound($"No transactions found for type '{transactionType}' in the specified date range.");
-
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve filtered transactions: {ex.Message}");
-        //    }
-        //}
-
-
-        //[HttpGet("date-range")]
-        //public async Task<IActionResult> GetTransactionsByDateRange(DateTime startDate, DateTime endDate)
-        //{
-        //    try
-        //    {
-        //        if (startDate > endDate)
-        //            return BadRequest("Start date must be before end date.");
-
-        //        var transactions = await _bankManagerService.GetTransactionsByDateRange(startDate, endDate);
-        //        if (!transactions.Any())
-        //            return NotFound("No transactions found for the specified date range.");
-
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve transactions: {ex.Message}");
-        //    }
-        //}
-
-        //[HttpGet("user-transactions")]
-        //public async Task<IActionResult> GetUserTransactions(int? userId, string? email)
-        //{
-        //    try
-        //    {
-        //        var transactions = await _bankManagerService.GetUserTransactions(userId, email);
-        //        if (!transactions.Any())
-        //            return NotFound("No user transactions found.");
-
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve user transactions: {ex.Message}");
-        //    }
-        //}
-
-        //[HttpGet("user-date-range")]
-        //public async Task<IActionResult> GetUserTransactionsByDateRange(int userId, DateTime startDate, DateTime endDate)
-        //{
-        //    try
-        //    {
-        //        if (startDate > endDate)
-        //            return BadRequest("Start date must be before end date.");
-
-        //        var transactions = await _bankManagerService.GetUserTransactionsByDateRange(userId, startDate, endDate);
-        //        if (!transactions.Any())
-        //            return NotFound("No transactions found for the specified user and date range.");
-
-        //        return Ok(transactions);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"Failed to retrieve user transactions: {ex.Message}");
-        //    }
-        //}
 
         [HttpGet("user-account/{userId}")]
         public async Task<IActionResult> GetUserAccountDetails(int userId)

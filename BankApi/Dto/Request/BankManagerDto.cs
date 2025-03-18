@@ -1,4 +1,5 @@
 ﻿using System.Reflection.Metadata;
+using BankApi.Entities;
 
 namespace BankApi.Dto
 {
@@ -12,6 +13,6 @@ namespace BankApi.Dto
         public string Address { get; set; }
         public DateTime DateOfBirth { get; set; }
         public int RoleId { get; set; }
-        //public int RoleId { get; set; }
+        public RequestStatus RequestStatus { get; set; } = RequestStatus.Approved;
     }
 }

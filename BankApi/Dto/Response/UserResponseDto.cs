@@ -17,6 +17,7 @@ namespace BankApi.Dto
         [Column(TypeName = "nvarchar(10)")] // Store Enum as String
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public AccountType AccountType { get; set; }
+        public RequestStatus RequestStatus { get; set; }
     }
 
 }

@@ -1,6 +1,5 @@
 ﻿using BankApi.Dto;
 using BankApi.Dto.Request;
-using BankApi.Entities;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,70 +10,28 @@ using System.Threading.Tasks;
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService _userService;
+    private readonly IAuthService _authService;
 
-    public AuthController(IAuthService userService)
+    public AuthController(IAuthService authService)
     {
-        _userService = userService;
+        _authService = authService;
     }
 
+    private int GetUserIdFromClaims()
+    {
+        return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+    }
+
+    //Register
     [HttpPost("register")]
-    public async Task<IActionResult> Register( UserRequestDto userRequestDto)
+    public async Task<IActionResult> Register([FromBody] UserRequestDto userDto)
     {
-        var result = await _userService.RegisterUserAsync(userRequestDto);
-        return Ok(new { message = result });
-    }
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto loginDto)
-    {
-        var message = await _userService.LoginAsync(loginDto);
-        if (message == "OTP Sent for Verification. Please verify OTP to proceed.")
-        {
-            return Ok(new { message });
-        }
-
-        return Ok(new { message = "Login Successfully", token = message });
-    }
-
-    [HttpPost("verify-otp")]
-    public async Task<IActionResult> VerifyOtp([FromBody] OtpVerificationDto dto, [FromQuery] string flowType , AccountType accountType)
-    {
-        var result = await _userService.VerifyOtpAsync(dto.Email, dto.Otp, flowType,accountType);
-        return Ok(result);
-    }
-
-
-    [Authorize(Policy = "AllUsers")]
-    [HttpGet("me")]
-    public async Task<IActionResult> GetUser()
-    {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        var user = await _userService.GetUserByIdAsync(userId);
-        if (user == null)
-        {
-            return NotFound(new { message = "User not found" });
-        }
-        return Ok(user);
-    }
-
-    [Authorize(Policy = "AllUsers")]
-    [HttpPut("toggle-2fa")]
-    public async Task<IActionResult> ToggleTwoFactor([FromBody] TwoFactorToggleDto dto)
-    {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        var message = await _userService.ToggleTwoFactorAsync(userId, dto.TwoFactorEnabled);
-        return Ok(new { message });
-    }
-    [Authorize(Policy = "AllUsers")]
-    [HttpGet("two-factor-status")]
-    public async Task<IActionResult> GetTwoFactorStatus()
-    {
         try
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-            var isEnabled = await _userService.GetTwoFactorStatusAsync(userId);
-            return Ok(new { TwoFactorEnabled = isEnabled });
+            var result = await _authService.RegisterUserAsync(userDto);
+            return Ok(new { message = result });
         }
         catch (Exception ex)
         {
@@ -82,18 +39,118 @@ public class AuthController : ControllerBase
         }
     }
 
+    //Login
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+    {
+        try
+        {
+            var message = await _authService.LoginAsync(loginDto);
+
+            return Ok(message == "OTP Sent for Verification. Please verify OTP to proceed."
+                ? new { message }
+                : new { message = "Login Successfully", token = message });
+        }
+        catch (Exception ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    //Get Personal Details
+    [Authorize(Policy = "AllUsers")]
+    [HttpGet("me")]
+    public async Task<IActionResult> GetUser()
+    {
+        try
+        {
+            var userId = GetUserIdFromClaims();
+            var user = await _authService.GetUserByIdAsync(userId);
+            return user != null ? Ok(user) : NotFound(new { message = "User not found" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    //Verify-otp
+    [HttpPost("verify-otp")]
+    public async Task<IActionResult> VerifyOtp([FromBody] OtpVerificationDto otpDto, [FromQuery] string flowType)
+    {
+        try
+        {
+            var result = await _authService.VerifyOtpAsync(otpDto.Email, otpDto.Otp, flowType);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    //Forgot-password
     [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
     {
-        var message = await _userService.ForgotPasswordAsync(dto.Email);
-        return Ok(new { message });
+        try
+        {
+            var message = await _authService.ForgotPasswordAsync(forgotPasswordDto.Email);
+            return Ok(new { message }); 
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
-
+    //Reset-password
     [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
     {
-        var message = await _userService.ResetPasswordAsync(dto.Email, dto.Otp, dto.NewPassword);
-        return Ok(new { message });
+        try
+        {
+            var message = await _authService.ResetPasswordAsync(resetPasswordDto.Email, resetPasswordDto.NewPassword);
+            return Ok(new { message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
+
+    //2fa enable
+    [Authorize(Policy = "AllUsers")]
+    [HttpPost("toggle-2fa")]
+    public async Task<IActionResult> ToggleTwoFactor([FromBody] TwoFactorToggleDto twoFactorDto)
+    {
+        try
+        {
+            var userId = GetUserIdFromClaims();
+            var message = await _authService.ToggleTwoFactorAsync(userId, twoFactorDto.TwoFactorEnabled);
+            return Ok(new { message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+    //2fa detail
+    [Authorize(Policy = "AllUsers")]
+    [HttpGet("two-factor-status")]
+    public async Task<IActionResult> GetTwoFactorStatus()
+    {
+        try
+        {
+            var userId = GetUserIdFromClaims();
+            bool isEnabled = await _authService.GetTwoFactorStatusAsync(userId);
+            return Ok(new { isEnabled });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+ 
 }

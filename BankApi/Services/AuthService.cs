@@ -1,217 +1,190 @@
 ﻿using AutoMapper;
+using BankApi.Data;
 using BankApi.Dto;
 using BankApi.Entities;
 using BankApi.Repositories.Interfaces;
 using BankApi.Services.Interfaces;
-using System.Security.Cryptography;
-using System.Text;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading.Tasks;
 
 namespace BankApi.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly Repositories.Interfaces.IAuthRepository _authRepository;
+        private readonly IAuthRepository _authRepository;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IMapper _mapper;
         private readonly IEmailService _emailService;
+        private readonly BankDb1Context _context;
 
-        public AuthService(Repositories.Interfaces.IAuthRepository authRepository, IJwtTokenGenerator jwtTokenGenerator, IMapper mapper , IEmailService emailService)
+        public AuthService(IAuthRepository authRepository, IJwtTokenGenerator jwtTokenGenerator, IMapper mapper, IEmailService emailService, BankDb1Context context)
         {
             _authRepository = authRepository;
             _jwtTokenGenerator = jwtTokenGenerator;
             _mapper = mapper;
             _emailService = emailService;
+            _context = context;
         }
 
+    //Auth Methods
+        //1.Register Logic
         public async Task<string> RegisterUserAsync(UserRequestDto userRequestDto)
         {
-            var existingUser = await _authRepository.GetUserByEmailAsync(userRequestDto.Email);
-            if (existingUser != null)
-            {
+            if (await _authRepository.GetUserByEmailAsync(userRequestDto.Email) != null)
                 throw new Exception("User already exists");
-            }
+
+            var defaultRole = await _authRepository.GetRoleByNameAsync("Customer")
+                              ?? throw new Exception("Default role not found");
 
             var user = _mapper.Map<Users>(userRequestDto);
-            user.PasswordHash = HashPassword(userRequestDto.Password);
-            user.RoleId = 3;
+            user.PasswordHash = PasswordUtility.HashPassword(userRequestDto.Password);
+            user.RoleId = defaultRole.RoleId;
+            user.AccountType = userRequestDto.AccountType;  
 
+            if (user.IsEmailVerified)
+            {
+                user.RequestStatus = RequestStatus.Pending;
+            }
             await _authRepository.CreateUserAsync(user);
-            await SendOtpAsync(user.Email, user.UserId);
+            await SendVerificationEmailAsync(user.Email, user.UserId);
 
-            return "OTP Sent to Email for Verification";
+            return "Verification email sent. Please check your inbox.";
         }
 
+        //2.Login Logic
         public async Task<string> LoginAsync(LoginDto loginDto)
         {
             var user = await _authRepository.GetUserByEmailAsync(loginDto.Email);
-            if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
-            {
+            if (user == null || !PasswordUtility.VerifyPassword(loginDto.Password, user.PasswordHash))
                 throw new Exception("Invalid email or password");
-            }
 
-            if (!user.IsEmailVerified)
-            {
-                throw new Exception("User is not verified. Please verify your email.");
-            }
+            if (!user.IsEmailVerified) throw new Exception("User is not verified. Please verify your email.");
+            if (user.RequestStatus != RequestStatus.Approved) throw new Exception("Your account is pending approval by an admin.");
 
             if (user.TwoFactorEnabled)
             {
-                await SendOtpAsync(user.Email, user.UserId);
+                await SendVerificationEmailAsync(user.Email, user.UserId);
                 return "OTP Sent for Verification. Please verify OTP to proceed.";
             }
 
             return _jwtTokenGenerator.GenerateToken(user.UserId, user.Email, user.RoleId);
         }
 
-        public async Task<object> VerifyOtpAsync(string email, string otp, string flowType, AccountType accountType)
-        {
-            var user = await _authRepository.GetUserByEmailAsync(email);
-            if (user == null)
-            {
-                throw new Exception("User not found");
-            }
-
-            if (user.Otp != otp || user.OtpExpiry < DateTime.UtcNow)
-            {
-                throw new Exception("Invalid or expired OTP");
-            }
-
-            if (flowType == "registration" || flowType == "login")
-            {
-                user.IsEmailVerified = true;
-                user.Otp = null;
-                user.OtpExpiry = null;
-                await _authRepository.UpdateUserAsync(user);
-
-                if (flowType == "registration")
-                {
-                    var accountNumber = GenerateAccountNumber();
-                    var initialBalance = accountType == AccountType.Savings ? 1000 : 5000;
-
-                    var account = new Account
-                    {
-                        UserId = user.UserId,
-                        AccountNumber = accountNumber,
-                        Balance = initialBalance,
-                        AccountType = accountType,
-                    };
-
-                    await _authRepository.CreateAccountAsync(account);
-
-                    return new { isSuccess = true, redirectType = "registration" };
-                }
-
-                if (flowType == "login")
-                {
-                    var token = _jwtTokenGenerator.GenerateToken(user.UserId, user.Email, user.RoleId);
-                    return new { isSuccess = true, token, redirectType = "login" };
-                }
-            }
-            else if (flowType == "forgotPassword")
-            {
-                user.IsEmailVerified = true;
-                await _authRepository.UpdateUserAsync(user);
-
-                return new { isSuccess = true, redirectType = "forgotPassword" };
-            }
-
-            throw new Exception("Invalid flow type");
-        }
-
+    //Get User Detail By Id 
         public async Task<UserWithAccountDto> GetUserByIdAsync(int userId)
         {
             var user = await _authRepository.GetUserByIdAsync(userId);
-            if (user == null)
-            {
-                return null;
-            }
-            return _mapper.Map<UserWithAccountDto>(user);
+            return user == null ? null : _mapper.Map<UserWithAccountDto>(user);
         }
 
-        private string GenerateOtp()
-        {
-            return new Random().Next(100000, 999999).ToString();
-        }
+     //Forgot and Reset Password
 
-        public async Task<string> SendOtpAsync(string email, int userId)
-        {
-            string otp = GenerateOtp();
-            DateTime expiry = DateTime.UtcNow.AddMinutes(10);
-            await _authRepository.SaveOtpAsync(userId, otp, expiry);
-
-            var subject = "Your OTP Code";
-            var body = $"Your OTP code is {otp}. It will expire in 10 minutes.";
-
-            bool isEmailSent = await _emailService.SendEmailAsync(email, subject, body);
-
-            return isEmailSent ? "OTP Sent Successfully" : "Failed to Send OTP";
-        }
-
+        //1.Forgot Password
         public async Task<string> ForgotPasswordAsync(string email)
         {
             var user = await _authRepository.GetUserByEmailAsync(email);
             if (user == null) throw new Exception("User not found");
 
-            await SendOtpAsync(email, user.UserId);
+            await SendVerificationEmailAsync(email, user.UserId);
             return "OTP Sent for Password Reset";
-        }
+        } 
 
-        public async Task<string> ResetPasswordAsync(string email, string otp, string newPassword)
+        //2.Reset Password
+        public async Task<bool> ResetPasswordAsync(string email, string newPassword)
         {
-            var user = await _authRepository.GetUserByEmailAsync(email);
-            if (user == null) throw new Exception("User not found");
+            var user = await _authRepository.GetUserByEmailAsync(email)
+                       ?? throw new Exception("User not found");
 
-            if (user.Otp != otp || user.OtpExpiry < DateTime.UtcNow)
+            user.PasswordHash = PasswordUtility.HashPassword(newPassword);
+
+            // Remove OTP after password reset
+            var otpRecord = await _context.OtpVerifications.FirstOrDefaultAsync(o => o.UserId == user.UserId);
+            if (otpRecord != null)
             {
-                throw new Exception("Invalid or Expired OTP");
+                _context.OtpVerifications.Remove(otpRecord);
             }
 
-            user.PasswordHash = HashPassword(newPassword);
-            user.Otp = null;
-            user.OtpExpiry = null;
-
             await _authRepository.UpdateUserAsync(user);
-            return "Password Reset Successfully";
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
+    //Email Verification and 2fa Logic
+
+        //1.Send verification otp in mail using link
+        public async Task<string> SendVerificationEmailAsync(string email, int userId)
+        {
+            string otp = OtpUtility.GenerateOtp();
+            DateTime expiry = OtpUtility.GetOtpExpiry();
+            await _authRepository.SaveOtpAsync(userId, otp, expiry);
+
+            // Open signup page and trigger OTP modal automatically
+            string verificationLink = $"http://localhost:5173/signup?otp={otp}&email={email}";
+
+            string emailBody = $@"
+        <p>Click the link below to verify your email:</p>
+        <p><a href='{verificationLink}' target='_blank'>{verificationLink}</a></p>
+        <p>If the link does not work, copy and paste it into your browser.</p>";
+
+            bool isEmailSent = await _emailService.SendEmailAsync(email, "Verify Your Email", emailBody);
+
+            return isEmailSent ? "Verification email sent successfully" : "Failed to send verification email";
+        }
+
+        //2Verify Otp For Different Cases
+        public async Task<object> VerifyOtpAsync(string email, string otp, string flowType)
+        {
+            var user = await _authRepository.GetUserByEmailAsync(email)
+                       ?? throw new Exception("User not found");
+
+            if (!await _authRepository.VerifyOtpAsync(email, otp))
+                throw new Exception("Invalid or expired OTP");
+
+            // Remove OTP only for registration or login
+            if (flowType == "registration" || flowType == "login")
+            {
+                user.IsEmailVerified = true;
+                var otpRecord = await _context.OtpVerifications.FirstOrDefaultAsync(o => o.UserId == user.UserId);
+                if (otpRecord != null)
+                {
+                    _context.OtpVerifications.Remove(otpRecord);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return flowType switch
+            {
+                "registration" => new { isSuccess = true, message = "Email verified successfully. Waiting for Admin Approval." },
+                "login" => user.RequestStatus == RequestStatus.Approved
+                    ? new { isSuccess = true, token = _jwtTokenGenerator.GenerateToken(user.UserId, user.Email, user.RoleId), redirectType = "login" }
+                    : throw new Exception("Your account is pending approval by an admin."),
+                "forgotPassword" => new { isSuccess = true, redirectType = "forgotPassword" }, // OTP remains
+                _ => throw new Exception("Invalid flow type")
+            };
+        }
+
+
+        //3.Two Factor Authentication enabled and disabled logic 
         public async Task<string> ToggleTwoFactorAsync(int userId, bool isEnabled)
         {
             var user = await _authRepository.GetUserByIdAsync(userId);
-            if (user == null)
-            {
-                throw new Exception("User not found");
-            }
+            if (user == null) throw new Exception("User not found");
 
             user.TwoFactorEnabled = isEnabled;
             await _authRepository.UpdateUserAsync(user);
 
             return isEnabled ? "Two-Factor Authentication Enabled" : "Two-Factor Authentication Disabled";
         }
+
+        //4.Get Status of Two Factor Authentication
         public async Task<bool> GetTwoFactorStatusAsync(int userId)
         {
             var user = await _authRepository.GetUserByIdAsync(userId);
-            if (user == null)
-            {
-                throw new Exception("User not found");
-            }
+            if (user == null) throw new Exception("User not found");
+
             return user.TwoFactorEnabled;
-        }
-
-        private string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashedBytes);
-        }
-
-        private bool VerifyPassword(string password, string storedHash)
-        {
-            return HashPassword(password) == storedHash;
-        }
-
-        private string GenerateAccountNumber()
-        {
-            return "304801000" + new Random().Next(10000, 99999);
         }
     }
 }

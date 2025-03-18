@@ -12,6 +12,7 @@ namespace BankApi.Dto
         public string SenderAccount { get; set; }
         public string ReceiverAccount { get; set; }
         public decimal Amount { get; set; }
+        public string Description { get; set; }
         public TransactionType Type { get; set; }  // Deposit, Withdraw, Transfer
         public DateTime TransactionDate { get; set; }
     }

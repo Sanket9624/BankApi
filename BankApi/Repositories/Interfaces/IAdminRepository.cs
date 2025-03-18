@@ -1,5 +1,6 @@
 ﻿using BankApi.Dto.Request;
 using BankApi.Entities;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,26 +8,32 @@ namespace BankApi.Repositories.Interfaces
 {
     public interface IAdminRepository
     {
-        // Admin
-        Task<Users> GetAdminAsync();
 
-        // Roles
+        // Role Management
         Task<RoleMaster> CreateRoleAsync(RoleMaster role);
-        Task<bool> DeleteRoleAsync(int roleId);
-        Task<bool> GetRoleByIdAsync(int roleId);
         Task<List<RoleMaster>> GetRolesAsync();
+        Task<bool> GetRoleByIdAsync(int roleId);
+        Task<bool> DeleteRoleAsync(int roleId);
 
-        // Bank Managers
+        // Manager Management
         Task<Users> CreateBankManagerAsync(Users bankManager);
         Task<List<Users>> GetBankManagersAsync();
 
-        // Users
+        // Customer Management
         Task<List<Users>> GetAllUsersExceptAdminAsync();
-        Task<Users> UpdateUserAsync(int UserId ,BankMangerUpdateDto user);
+        Task<IEnumerable<Users>> GetAllUsersAsync();
+
+        // User Management
+        Task<Users> UpdateUserAsync(int userId, BankMangerUpdateDto dto);
+        Task<Account> GetAccountByUserIdAsync(int userId);
         Task<bool> DeleteUserAsync(int userId);
 
-        // Account (if related to user updates)
-        Task<Account> GetAccountByUserIdAsync(int userId);
+        // Account Management
+        Task<List<string>> GetAllAccountNumbersAsync();
         Task UpdateAccountAsync(Account account);
+        Task CreateAccountAsync(Account account);
+
+        // Account Request Tracking
+        Task<List<Users>> GetApproveOrRejectedAccountsAsync();
     }
 }

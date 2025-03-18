@@ -23,7 +23,7 @@ public class UserController : ControllerBase
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
 
-        var result = await _bankingService.DepositAsync(userId, request.Amount);
+        var result = await _bankingService.DepositAsync(userId, request.Amount,request.Description);
         return result ? Ok(new { Message = "Deposit successful" }) : BadRequest(new { Message = "Deposit failed" });
     }
 
@@ -32,7 +32,7 @@ public class UserController : ControllerBase
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
 
-        var result = await _bankingService.WithdrawAsync(userId, request.Amount);
+        var result = await _bankingService.WithdrawAsync(userId, request.Amount,request.Description);
         return result ? Ok(new { Message = "Withdrawal successful" }) : BadRequest(new { Message = "Insufficient balance" });
     }
 
@@ -41,7 +41,7 @@ public class UserController : ControllerBase
     {
         var senderUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
 
-        var result = await _bankingService.TransferAsync(senderUserId, request.ReceiverAccountNumber, request.Amount);
+        var result = await _bankingService.TransferAsync(senderUserId, request.ReceiverAccountNumber, request.Amount,request.Description);
         return result ? Ok(new { Message = "Transfer successful" }) : BadRequest(new { Message = "Transfer failed" });
     }
 

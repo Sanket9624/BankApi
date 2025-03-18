@@ -10,9 +10,13 @@ namespace BankApi.Data
 
         }
         public DbSet<Users> Users{ get; set; }
+
+
         public DbSet<RoleMaster> RoleMaster { get; set; }
         public DbSet<Account> Account { get; set; }
         public DbSet<Transactions> Transactions { get; set; }
+        public DbSet<OtpVerifications> OtpVerifications { get; set; }
+
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

@@ -1,17 +1,23 @@
 ﻿using BankApi.Entities;
-using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BankApi.Repositories.Interfaces
 {
     public interface IAuthRepository
     {
+        //auth service
+        Task CreateUserAsync(Users user);
         Task<Users> GetUserByEmailAsync(string email);
         Task<Users> GetUserByIdAsync(int userId);
-        Task<Users> CreateUserAsync(Users user);
-        Task SaveOtpAsync(int userId, string otp, DateTime? expiry);
-        Task<Users> VerifyOtpAsync(string email, string otp);
         Task UpdateUserAsync(Users user);
-        Task CreateAccountAsync(Account account);
+        Task DeleteUserAsync(Users user);
+
+        //other validation and needed methods
+        Task<RoleMaster> GetRoleByNameAsync(string roleName);
+        Task SaveOtpAsync(int userId, string otp, DateTime expiry);
+        Task<bool> VerifyOtpAsync(string email, string otp);
+      
     }
 }

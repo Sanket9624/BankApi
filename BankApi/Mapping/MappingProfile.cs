@@ -10,6 +10,7 @@ namespace BankingManagement.Mapping
         public MappingProfiles()
         {
             CreateMap<Users, UserRequestDto>().ReverseMap();
+            CreateMap<UnverifiedUsers, UserRequestDto>().ReverseMap();
             CreateMap<Users, UserResponseDto>()
                 .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.RoleMaster.RoleName));
             CreateMap<Users, LoginDto>().ReverseMap();

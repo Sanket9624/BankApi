@@ -23,6 +23,7 @@ namespace BankApi.Entities
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public TransactionType Type { get; set; }
         public decimal Amount { get; set; }
+        public string? Description { get; set; }
         public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("SenderAccountId")]

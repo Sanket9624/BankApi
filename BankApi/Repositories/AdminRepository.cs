@@ -12,73 +12,87 @@ namespace BankApi.Repositories
     public class AdminRepository : IAdminRepository
     {
         private readonly BankDb1Context _context;
+        private readonly IAuthRepository _authRepository;
 
-        public AdminRepository(BankDb1Context context)
+        public AdminRepository(BankDb1Context context,IAuthRepository authRepository)
         {
             _context = context;
+            _authRepository = authRepository;
         }
 
-        public async Task<Users> GetAdminAsync()
-        {
-            return await _context.Users
-                .Include(u => u.RoleMaster)
-                .FirstOrDefaultAsync(u => u.RoleMaster.RoleName == "SuperAdmin");
-        }
-
+        //1.Role Related Operation
+      
+        //Create a New Role
         public async Task<RoleMaster> CreateRoleAsync(RoleMaster role)
         {
-            _context.RoleMaster.Add(role);
+            await _context.RoleMaster.AddAsync(role);
             await _context.SaveChangesAsync();
             return role;
         }
 
+        //Get All the Roles
+        public async Task<List<RoleMaster>> GetRolesAsync() =>
+            await _context.RoleMaster.AsNoTracking().ToListAsync();
+
+        //Get RoleById
+        public async Task<bool> GetRoleByIdAsync(int roleId) =>
+            await _context.RoleMaster.AsNoTracking().AnyAsync(r => r.RoleId == roleId);
+
+        //Delete existing Role
         public async Task<bool> DeleteRoleAsync(int roleId)
         {
+            //prevent deletion of essential Roles
+            if (roleId <= 3) return false; 
             var role = await _context.RoleMaster.FindAsync(roleId);
-            if (role == null || roleId <= 2) return false; // Prevent deletion of essential roles.
+            if (role == null) return false;
 
             _context.RoleMaster.Remove(role);
             await _context.SaveChangesAsync();
             return true;
         }
+   
+     //2.Manager Related Operation
 
-        public async Task<List<RoleMaster>> GetRolesAsync()
-        {
-            return await _context.RoleMaster.ToListAsync();
-        }
-
+        //Create a Bank Manager
         public async Task<Users> CreateBankManagerAsync(Users bankManager)
         {
-            _context.Users.AddAsync(bankManager);
+            await _context.Users.AddAsync(bankManager);
             await _context.SaveChangesAsync();
             return bankManager;
         }
-
-
-        public async Task<List<Users>> GetBankManagersAsync()
-        {
-            return await _context.Users
-                .Where(u => u.RoleId == 2)
+        //Get the list of Bank Managers
+        public async Task<List<Users>> GetBankManagersAsync() =>
+            await _context.Users
+                .Where(u => u.RoleId == 2 && u.IsEmailVerified == true)
                 .Include(u => u.RoleMaster)
+                .AsNoTracking()
                 .ToListAsync();
-        }
 
-        public async Task<List<Users>> GetAllUsersExceptAdminAsync()
-        {
+    //3.Customer Related Operation
 
-
-            return await _context.Users
-                .Where(u => u.RoleId == 3)
+        //Get the customerList 
+        public async Task<List<Users>> GetAllUsersExceptAdminAsync() =>
+            await _context.Users
+                .Where(u => u.RoleId == 3 && u.IsEmailVerified == true && u.RequestStatus == RequestStatus.Approved)
                 .Include(u => u.RoleMaster)
+                .AsNoTracking()
                 .ToListAsync();
-        }
 
+        // Get all active users
+        public async Task<IEnumerable<Users>> GetAllUsersAsync() =>
+        await _context.Users
+            .Include(u => u.RoleMaster)
+            .ToListAsync();
+
+
+        //4.User Related Operation
+
+        //update users
         public async Task<Users> UpdateUserAsync(int userId, BankMangerUpdateDto dto)
         {
             var existingUser = await _context.Users.FindAsync(userId);
             if (existingUser == null || existingUser.RoleId == 1) return null;
 
-            // Update only specified fields
             existingUser.FirstName = dto.FirstName ?? existingUser.FirstName;
             existingUser.LastName = dto.LastName ?? existingUser.LastName;
             existingUser.MobileNo = dto.MobileNo ?? existingUser.MobileNo;
@@ -88,22 +102,11 @@ namespace BankApi.Repositories
             return existingUser;
         }
 
-        public async Task<Account> GetAccountByUserIdAsync(int userId)
-        {
-            return await _context.Account.FirstOrDefaultAsync(a => a.UserId == userId);
-        }
-        public async Task<bool> GetRoleByIdAsync(int roleId)
-        {
-            return await _context.RoleMaster.AsNoTracking()
-                .AnyAsync(r => r.RoleId == roleId);
-        }
+        //Get account Detail By UserId
+        public async Task<Account> GetAccountByUserIdAsync(int userId) =>
+            await _context.Account.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
 
-        public async Task UpdateAccountAsync(Account account)
-        {
-            _context.Account.Update(account);
-            await _context.SaveChangesAsync();
-        }
-
+        //SoftDelete the User
         public async Task<bool> DeleteUserAsync(int userId)
         {
             var user = await _context.Users.FindAsync(userId);
@@ -113,5 +116,36 @@ namespace BankApi.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+
+     //5.Account Related Operation
+
+        //Get Accountnumber of customers
+        public async Task<List<string>> GetAllAccountNumbersAsync()
+        {
+            return await _context.Account
+                .Select(a => a.AccountNumber)
+                .ToListAsync();
+        }
+
+        //Update Account
+        public async Task UpdateAccountAsync(Account account)
+        {
+            _context.Account.Update(account);
+            await _context.SaveChangesAsync();
+        }
+
+        //CreateAccount
+        public async Task CreateAccountAsync(Account account)
+        {
+            await _context.Account.AddAsync(account);
+            await _context.SaveChangesAsync();
+        }
+        // Get list of approved accounts
+        public async Task<List<Users>> GetApproveOrRejectedAccountsAsync() =>
+            await _context.Users
+                .Where(u => u.RequestStatus == RequestStatus.Approved || u.RequestStatus == RequestStatus.Rejected && u.RoleMaster.RoleName == "Customer")
+                .AsNoTracking()
+                .ToListAsync();
     }
 }

@@ -31,7 +31,7 @@ public class UserRepository : IUserRepository
     }
 
 
-    public async Task<bool> DepositAsync(int accountId, decimal amount)
+    public async Task<bool> DepositAsync(int accountId, decimal amount ,string description )
     {
         var account = await GetAccountByIdAsync(accountId);
         if (account == null || amount <= 0) return false;
@@ -42,7 +42,8 @@ public class UserRepository : IUserRepository
         {
             ReceiverAccountId = accountId,
             Type = TransactionType.Deposit,
-            Amount = amount
+            Amount = amount,
+            Description = description
         };
 
         _context.Transactions.Add(transaction);
@@ -50,7 +51,7 @@ public class UserRepository : IUserRepository
         return true;
     }
 
-    public async Task<bool> WithdrawAsync(int accountId, decimal amount)
+    public async Task<bool> WithdrawAsync(int accountId, decimal amount, string description)
     {
         var account = await GetAccountByIdAsync(accountId);
         if (account == null || amount <= 0 || account.Balance < amount) return false;
@@ -61,7 +62,8 @@ public class UserRepository : IUserRepository
         {
             SenderAccountId = accountId,
             Type = TransactionType.Withdraw,
-            Amount = amount
+            Amount = amount,
+            Description = description
         };
 
         _context.Transactions.Add(transaction);
@@ -69,7 +71,7 @@ public class UserRepository : IUserRepository
         return true;
     }
 
-    public async Task<bool> TransferAsync(int senderAccountId, string ReceiverAccountNumber, decimal amount)
+    public async Task<bool> TransferAsync(int senderAccountId, string ReceiverAccountNumber, decimal amount, string description)
     {
         var sender = await GetAccountByIdAsync(senderAccountId);
         var receiver = await GetAccountByNumberAsync(ReceiverAccountNumber);
@@ -85,7 +87,8 @@ public class UserRepository : IUserRepository
             SenderAccountId = senderAccountId,
             ReceiverAccountId = receiver.AccountId,
             Type = TransactionType.Transfer,
-            Amount = amount
+            Amount = amount,
+            Description = description
         };
 
         _context.Transactions.Add(transaction);

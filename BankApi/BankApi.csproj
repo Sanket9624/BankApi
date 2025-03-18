@@ -21,6 +21,8 @@
     <Compile Remove="Data\BankDbContextFactory.cs" />
     <Compile Remove="Dto\Request\BankManagerRequestDto.cs" />
     <Compile Remove="Dto\Request\UserAccountDto.cs" />
+    <Compile Remove="Utilities\JwtUtility.cs" />
+    <Compile Remove="Utilities\Utilities.cs" />
   </ItemGroup>
 
   <ItemGroup>

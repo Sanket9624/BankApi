@@ -1,18 +1,27 @@
 ﻿using BankApi.Dto;
-using BankApi.Entities;
+using System.Threading.Tasks;
 
 namespace BankApi.Services.Interfaces
 {
     public interface IAuthService
     {
+    //Auth Service
+        //Register
         Task<string> RegisterUserAsync(UserRequestDto userRequestDto);
+        //Login
         Task<string> LoginAsync(LoginDto loginDto);
-        Task<string> ToggleTwoFactorAsync(int userId, bool isEnabled);
+
+    //Get user own details
         Task<UserWithAccountDto> GetUserByIdAsync(int userId);
-        Task<string> SendOtpAsync(string email, int userId);
+
+    //forgot Password 
         Task<string> ForgotPasswordAsync(string email);
-        Task<string> ResetPasswordAsync(string email, string otp, string newPassword);
-        Task<object> VerifyOtpAsync(string email, string otp, string flowType , AccountType accountType);
+        Task<bool> ResetPasswordAsync(string email, string newPassword);
+        
+    //For two factor authentication and otp verify
+        Task<string> SendVerificationEmailAsync(string email, int userId);
+        Task<object> VerifyOtpAsync(string email, string otp, string flowType);
+        Task<string> ToggleTwoFactorAsync(int userId, bool isEnabled);
         Task<bool> GetTwoFactorStatusAsync(int userId);
     }
 }

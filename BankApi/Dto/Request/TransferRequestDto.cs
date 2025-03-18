@@ -6,5 +6,6 @@ public class TransferRequestDto
     public decimal Amount { get; set; }
     [JsonIgnore]
     public int ReceiverUserId { get; set; }
+    public string Description { get; set; }
 
 }

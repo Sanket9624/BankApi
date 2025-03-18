@@ -18,35 +18,6 @@ namespace BankApi.Services
             return await _bankManagerRepository.GetAllTimeBankBalanceSheet();
         }
 
-        //public async Task<IEnumerable<TransactionResponseDto>> GetAllTransactions()
-        //{
-        //    return await _bankManagerRepository.GetAllTransactions();
-        //}
-
-        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByType(string transactionType)
-        //{
-        //    return await _bankManagerRepository.GetTransactionsByType(transactionType);
-        //}
-        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByTypeAndDateRange(string transactionType, DateTime? startDate, DateTime? endDate)
-        //{
-        //    return await _bankManagerRepository.GetTransactionsByTypeAndDateRange(transactionType, startDate, endDate);
-        //}
-
-        //public async Task<IEnumerable<TransactionResponseDto>> GetTransactionsByDateRange(DateTime startDate, DateTime endDate)
-        //{
-        //    return await _bankManagerRepository.GetTransactionsByDateRange(startDate, endDate);
-        //}
-
-        //public async Task<IEnumerable<TransactionResponseDto>> GetUserTransactions(int? userId, string? email)
-        //{
-        //    return await _bankManagerRepository.GetUserTransactions(userId, email);
-        //}
-
-        //public async Task<IEnumerable<TransactionResponseDto>> GetUserTransactionsByDateRange(int userId, DateTime startDate, DateTime endDate)
-        //{
-        //    return await _bankManagerRepository.GetUserTransactionsByDateRange(userId, startDate, endDate);
-        //}
-
         public async Task<AccountDetails> GetUserAccountDetails(int userId)
         {
             return await _bankManagerRepository.GetUserAccountDetails(userId);
@@ -71,10 +42,10 @@ namespace BankApi.Services
             return await _bankManagerRepository.GetTotalAccountCount();
         }
         public async Task<IEnumerable<TransactionResponseDto>> GetTransactions(
-    int? userId = null,
-    string? transactionType = null,
-    DateTime? startDate = null,
-    DateTime? endDate = null)
+             int? userId = null,
+             string? transactionType = null,
+             DateTime? startDate = null,
+             DateTime? endDate = null)
         {
             return await _bankManagerRepository.GetTransactions(userId, transactionType, startDate, endDate);
         }

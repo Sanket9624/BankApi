@@ -12,29 +12,29 @@ public class UserService : IUserService
         _repository = repository;
     }
 
-    public async Task<bool> DepositAsync(int userId, decimal amount)
+    public async Task<bool> DepositAsync(int userId, decimal amount, string description)
     {
         var user = await _repository.GetUserByIdAsync(userId);
         if (user?.Account == null) return false;
 
-        return await _repository.DepositAsync(user.Account.AccountId, amount);
+        return await _repository.DepositAsync(user.Account.AccountId, amount, description);
     }
 
-    public async Task<bool> WithdrawAsync(int userId, decimal amount)
+    public async Task<bool> WithdrawAsync(int userId, decimal amount, string description)
     {
         var user = await _repository.GetUserByIdAsync(userId);
         if (user?.Account == null) return false;
 
-        return await _repository.WithdrawAsync(user.Account.AccountId, amount);
+        return await _repository.WithdrawAsync(user.Account.AccountId, amount,description);
     }
 
-    public async Task<bool> TransferAsync(int userId, string receiverAccountNumber, decimal amount)
+    public async Task<bool> TransferAsync(int userId, string receiverAccountNumber, decimal amount, string description)
     {
         var sender = await _repository.GetUserByIdAsync(userId);
         //var receiver = await _repository.GetAccountByIdAsync(userId);
         if (sender?.Account == null) return false;
 
-        return await _repository.TransferAsync(sender.Account.AccountId, receiverAccountNumber, amount);
+        return await _repository.TransferAsync(sender.Account.AccountId, receiverAccountNumber, amount,description);
     }
 
 
@@ -60,6 +60,7 @@ public class UserService : IUserService
             Amount = t.Amount,
             Type = t.Type,
             TransactionDate = t.TransactionDate,
+            Description = t.Description,
             ReceiverName = t.Type == TransactionType.Transfer && t.ReceiverAccount?.Users != null
                 ? $"{t.ReceiverAccount.Users.FirstName} {t.ReceiverAccount.Users.LastName}"
                 : null
@@ -84,8 +85,12 @@ public class UserService : IUserService
             Amount = t.Amount,
             Type = t.Type,
             TransactionDate = t.TransactionDate,
+            Description = t.Description,
             ReceiverName = t.Type == TransactionType.Transfer && t.ReceiverAccount?.Users != null
                 ? $"{t.ReceiverAccount.Users.FirstName} {t.ReceiverAccount.Users.LastName}"
+                : null,
+            SenderName = t.Type == TransactionType.Transfer && t.SenderAccount?.Users != null
+                ? $"{t.SenderAccount.Users.FirstName} {t.SenderAccount.Users.LastName}"
                 : null
         }).ToList();
     }
