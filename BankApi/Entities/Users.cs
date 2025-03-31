@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace BankApi.Entities
 {
@@ -34,8 +35,10 @@ namespace BankApi.Entities
         [Required, MaxLength(200)]
         public string Address { get; set; }
 
-        public DateTime DateOfBirth { get; set; } 
+        public DateTime DateOfBirth { get; set; }
 
+        [Column(TypeName = "nvarchar(10)")] // Store Enum as String
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public AccountType AccountType { get; set; }
         [Required]
         public int RoleId { get; set; } // Linked to Role Table
@@ -44,6 +47,9 @@ namespace BankApi.Entities
         public DateTime? ApprovedAt { get; set; }
         public DateTime? RejectedAt { get; set; }
         public string? RejectionReason { get; set; }
+
+        [Column(TypeName = "nvarchar(10)")] // Store Enum as String
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public RequestStatus RequestStatus { get; set; } = RequestStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

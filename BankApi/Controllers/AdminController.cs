@@ -132,5 +132,35 @@ namespace BankApi.Controllers
             var accounts = await _adminService.GetApprovedAccountsAsync();
             return Ok(accounts);
         }
+
+        [Authorize(Policy = "SuperAdminOrBankManager")]
+        [HttpGet("pending-transactions")]
+        public async Task<ActionResult<List<TransactionResponseDto>>> GetPendingTransactions()
+        {
+            var transactions = await _adminService.GetPendingTransactionsAsync();
+            return Ok(transactions);
+        }
+
+        [Authorize(Policy = "SuperAdminOrBankManager")]
+        [HttpPost("approve/{transactionId}")]
+        public async Task<IActionResult> ApproveTransaction(int transactionId)
+        {
+            var result = await _adminService.ApproveTransactionAsync(transactionId);
+            if (!result.success)
+            {
+                Console.WriteLine($"Transaction {transactionId} approval failed: {result.errorMessage}");
+                return BadRequest(result.errorMessage);
+            }
+            return Ok("Transaction approved successfully.");
+        }
+
+        [Authorize(Policy = "SuperAdminOrBankManager")]
+        [HttpPost("reject/{transactionId}")]
+        public async Task<IActionResult> RejectTransaction(int transactionId, [FromBody] string reason)
+        {
+            var result = await _adminService.RejectTransactionAsync(transactionId, reason);
+            if (!result) return BadRequest("Transaction rejection failed.");
+            return Ok("Transaction rejected successfully.");
+        }
     }
 }

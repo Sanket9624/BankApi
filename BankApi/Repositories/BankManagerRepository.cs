@@ -4,6 +4,9 @@ using Microsoft.Data.SqlClient;
 using BankApi.Dto;
 using BankApi.Repositories.Interfaces;
 using Microsoft.AspNetCore.Connections;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using BankApi.Entities;
 
 namespace BankApi.Repositories
 {
@@ -60,10 +63,9 @@ namespace BankApi.Repositories
         public async Task<BankSummaryDto> GetAllTimeBankBalanceSheet()
         {
             using var connection = CreateConnection();
-
             using var multi = await connection.QueryMultipleAsync("GetAllTimeBankBalanceSheet", commandType: CommandType.StoredProcedure);
 
-            var bankSummary = new BankSummaryDto
+            return new BankSummaryDto
             {
                 TotalBankBalance = await multi.ReadFirstOrDefaultAsync<decimal>(),
                 TotalDepositedMoney = await multi.ReadFirstOrDefaultAsync<decimal>(),
@@ -71,50 +73,49 @@ namespace BankApi.Repositories
                 TotalTransactions = await multi.ReadFirstOrDefaultAsync<int>(),
                 UserTransactionCounts = (await multi.ReadAsync<UserTransactionCountDto>()).ToList()
             };
-
-            return bankSummary;
         }
-      public async Task<AccountSummaryDto> GetTotalAccounts()
+
+        // Get Total Accounts
+        public async Task<AccountSummaryDto> GetTotalAccounts()
         {
             using var connection = CreateConnection();
             using var multi = await connection.QueryMultipleAsync("GetTotalAccounts", commandType: CommandType.StoredProcedure);
 
-            var totalAccounts = await multi.ReadFirstOrDefaultAsync<int>();
-            var accountDetails = (await multi.ReadAsync<AccountDto>()).ToList();
-
             return new AccountSummaryDto
             {
-                TotalAccounts = totalAccounts,
-                AccountDetails = accountDetails
+                TotalAccounts = await multi.ReadFirstOrDefaultAsync<int>(),
+                AccountDetails = (await multi.ReadAsync<AccountDto>()).ToList()
             };
         }
 
+        // Get Total Account Count
         public async Task<int> GetTotalAccountCount()
         {
             using var connection = CreateConnection();
             return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM Accounts");
         }
+
+        // Get Transactions
         public async Task<IEnumerable<TransactionResponseDto>> GetTransactions(
-                 int? userId = null,
-                 string? transactionType = null,
-                 DateTime? startDate = null,
-                 DateTime? endDate = null)
+            int? userId,
+            string? transactionType,
+            TransactionStatus? status,
+            DateTime? startDate,
+            DateTime? endDate)
         {
             using var connection = CreateConnection();
-
             return await connection.QueryAsync<TransactionResponseDto>(
                 "GetTransactions",
                 new
                 {
                     UserId = userId,
                     TransactionType = transactionType,
+                    Status = status?.ToString(),
                     StartDate = startDate,
                     EndDate = endDate
                 },
                 commandType: CommandType.StoredProcedure
             );
         }
-
     }
 }
-

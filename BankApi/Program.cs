@@ -37,6 +37,8 @@ namespace BankApi
             RegisterServices(builder);
             ConfigureDatabase(builder);
 
+
+
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -78,6 +80,8 @@ namespace BankApi
                 });
             });
         }
+
+
 
         // ✅ Authentication & Authorization Configuration
         private static void ConfigureAuth(WebApplicationBuilder builder, byte[] key)

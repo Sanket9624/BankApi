@@ -1,4 +1,5 @@
-﻿using BankApi.Dto;
+﻿using System.Transactions;
+using BankApi.Dto;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -94,14 +95,16 @@ namespace BankingManagementSystem.Controllers
 
         [HttpGet("transactions")]
         public async Task<IActionResult> GetTransactions(
-        [FromQuery] int? userId = null,
-        [FromQuery] string? transactionType = null,
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
+            [FromQuery] int? userId,
+            [FromQuery] string? transactionType,
+            [FromQuery] BankApi.Entities.TransactionStatus? status,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
         {
-            var transactions = await _bankManagerService.GetTransactions(userId, transactionType, startDate, endDate);
+            var transactions = await _bankManagerService.GetTransactions(userId, transactionType, status, startDate, endDate);
             return Ok(transactions);
         }
+
 
     }
 }

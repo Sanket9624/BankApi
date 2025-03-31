@@ -9,5 +9,5 @@ public interface IUserService
     Task<bool> TransferAsync(int userId, string receiverAccountNumber, decimal amount, string description);
     Task<BalanceDto> GetBalanceAsync(int userId);
     Task<List<TransactionDto>> GetTransactionHistoryAsync(int userId);
-    Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type);
+    Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type,TransactionStatus? status);
 }

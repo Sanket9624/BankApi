@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using BankApi.Entities;
+﻿using BankApi.Entities;
 
 public class UserService : IUserService
 {
@@ -17,7 +14,7 @@ public class UserService : IUserService
         var user = await _repository.GetUserByIdAsync(userId);
         if (user?.Account == null) return false;
 
-        return await _repository.DepositAsync(user.Account.AccountId, amount, description);
+        return await _repository.RequestDepositAsync(user.Account.AccountId, amount, description, TransactionStatus.Pending);
     }
 
     public async Task<bool> WithdrawAsync(int userId, decimal amount, string description)
@@ -25,18 +22,16 @@ public class UserService : IUserService
         var user = await _repository.GetUserByIdAsync(userId);
         if (user?.Account == null) return false;
 
-        return await _repository.WithdrawAsync(user.Account.AccountId, amount,description);
+        return await _repository.RequestWithdrawAsync(user.Account.AccountId, amount, description, TransactionStatus.Pending);
     }
 
     public async Task<bool> TransferAsync(int userId, string receiverAccountNumber, decimal amount, string description)
     {
         var sender = await _repository.GetUserByIdAsync(userId);
-        //var receiver = await _repository.GetAccountByIdAsync(userId);
         if (sender?.Account == null) return false;
 
-        return await _repository.TransferAsync(sender.Account.AccountId, receiverAccountNumber, amount,description);
+        return await _repository.RequestTransferAsync(sender.Account.AccountId, receiverAccountNumber, amount, description, TransactionStatus.Pending);
     }
-
 
     public async Task<BalanceDto> GetBalanceAsync(int userId)
     {
@@ -61,13 +56,18 @@ public class UserService : IUserService
             Type = t.Type,
             TransactionDate = t.TransactionDate,
             Description = t.Description,
-            ReceiverName = t.Type == TransactionType.Transfer && t.ReceiverAccount?.Users != null
+            Status = t.Status, // Include status to show if it's pending, approved, or rejected
+            Reason = t.Status == TransactionStatus.Rejected ? t.Reason : null,
+            ReceiverName = t.ReceiverAccount?.Users != null
                 ? $"{t.ReceiverAccount.Users.FirstName} {t.ReceiverAccount.Users.LastName}"
+                : null,
+            SenderName = t.SenderAccount?.Users != null
+                ? $"{t.SenderAccount.Users.FirstName} {t.SenderAccount.Users.LastName}"
                 : null
         }).ToList();
     }
 
-    public async Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type)
+    public async Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type,TransactionStatus? status)
     {
         var user = await _repository.GetUserByIdAsync(userId);
         if (user?.Account == null) return new List<TransactionDto>();
@@ -77,7 +77,7 @@ public class UserService : IUserService
         if (startDate > endDate)
             (startDate, endDate) = (endDate, startDate);
 
-        var transactions = await _repository.GetCustomeTransactionHistoryAsync(user.Account.AccountId, startDate, endDate, type);
+        var transactions = await _repository.GetCustomeTransactionHistoryAsync(user.Account.AccountId, startDate, endDate, type, status);
 
         return transactions.Select(t => new TransactionDto
         {
@@ -86,10 +86,12 @@ public class UserService : IUserService
             Type = t.Type,
             TransactionDate = t.TransactionDate,
             Description = t.Description,
-            ReceiverName = t.Type == TransactionType.Transfer && t.ReceiverAccount?.Users != null
+            Status = t.Status,
+            Reason = t.Status == TransactionStatus.Rejected ? t.Reason : null,
+            ReceiverName = t.ReceiverAccount?.Users != null
                 ? $"{t.ReceiverAccount.Users.FirstName} {t.ReceiverAccount.Users.LastName}"
                 : null,
-            SenderName = t.Type == TransactionType.Transfer && t.SenderAccount?.Users != null
+            SenderName = t.SenderAccount?.Users != null
                 ? $"{t.SenderAccount.Users.FirstName} {t.SenderAccount.Users.LastName}"
                 : null
         }).ToList();

@@ -14,14 +14,14 @@ namespace BankApi.Repositories
         private readonly BankDb1Context _context;
         private readonly IAuthRepository _authRepository;
 
-        public AdminRepository(BankDb1Context context,IAuthRepository authRepository)
+        public AdminRepository(BankDb1Context context, IAuthRepository authRepository)
         {
             _context = context;
             _authRepository = authRepository;
         }
 
         //1.Role Related Operation
-      
+
         //Create a New Role
         public async Task<RoleMaster> CreateRoleAsync(RoleMaster role)
         {
@@ -42,7 +42,7 @@ namespace BankApi.Repositories
         public async Task<bool> DeleteRoleAsync(int roleId)
         {
             //prevent deletion of essential Roles
-            if (roleId <= 3) return false; 
+            if (roleId <= 3) return false;
             var role = await _context.RoleMaster.FindAsync(roleId);
             if (role == null) return false;
 
@@ -50,8 +50,8 @@ namespace BankApi.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
-   
-     //2.Manager Related Operation
+
+        //2.Manager Related Operation
 
         //Create a Bank Manager
         public async Task<Users> CreateBankManagerAsync(Users bankManager)
@@ -68,7 +68,7 @@ namespace BankApi.Repositories
                 .AsNoTracking()
                 .ToListAsync();
 
-    //3.Customer Related Operation
+        //3.Customer Related Operation
 
         //Get the customerList 
         public async Task<List<Users>> GetAllUsersExceptAdminAsync() =>
@@ -103,8 +103,19 @@ namespace BankApi.Repositories
         }
 
         //Get account Detail By UserId
-        public async Task<Account> GetAccountByUserIdAsync(int userId) =>
-            await _context.Account.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
+        public async Task<Account> GetAccountByUserIdAsync(int accountId)
+        {
+            var account = await _context.Account
+                .FirstOrDefaultAsync(a => a.AccountId == accountId);
+
+            if (account == null)
+            {
+                Console.WriteLine($"No account found for  {accountId}");
+            }
+
+            return account;
+        }
+
 
         //SoftDelete the User
         public async Task<bool> DeleteUserAsync(int userId)
@@ -118,7 +129,7 @@ namespace BankApi.Repositories
         }
 
 
-     //5.Account Related Operation
+        //5.Account Related Operation
 
         //Get Accountnumber of customers
         public async Task<List<string>> GetAllAccountNumbersAsync()
@@ -147,5 +158,27 @@ namespace BankApi.Repositories
                 .Where(u => u.RequestStatus == RequestStatus.Approved || u.RequestStatus == RequestStatus.Rejected && u.RoleMaster.RoleName == "Customer")
                 .AsNoTracking()
                 .ToListAsync();
+
+        public async Task<List<Transactions>> GetTransactionsByStatusAsync(TransactionStatus status)
+        {
+            return await _context.Transactions
+                .Where(t => t.Status == status)
+                .Include(t => t.SenderAccount.Users)
+                .Include(t => t.ReceiverAccount.Users)
+                .OrderByDescending(t => t.TransactionDate)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<Transactions> GetTransactionByIdAsync(int transactionId)
+        {
+            return await _context.Transactions.FindAsync(transactionId);
+        }
+        public async Task UpdateTransactionAsync(Transactions transaction)
+        {
+            _context.Transactions.Update(transaction);
+            await _context.SaveChangesAsync();
+        }
+
     }
 }

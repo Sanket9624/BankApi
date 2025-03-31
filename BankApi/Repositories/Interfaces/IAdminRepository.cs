@@ -34,6 +34,9 @@ namespace BankApi.Repositories.Interfaces
         Task CreateAccountAsync(Account account);
 
         // Account Request Tracking
+        Task UpdateTransactionAsync(Transactions transaction);
+        Task<Transactions> GetTransactionByIdAsync(int transactionId);
         Task<List<Users>> GetApproveOrRejectedAccountsAsync();
+        Task<List<Transactions>> GetTransactionsByStatusAsync(TransactionStatus status);
     }
 }

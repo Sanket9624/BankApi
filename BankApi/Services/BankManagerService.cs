@@ -1,6 +1,8 @@
-﻿using BankApi.Dto;
+﻿using System.Transactions;
+using BankApi.Dto;
 using BankApi.Repositories.Interfaces;
 using BankApi.Services.Interfaces;
+using BankApi.Entities;
 
 namespace BankApi.Services
 {
@@ -42,12 +44,13 @@ namespace BankApi.Services
             return await _bankManagerRepository.GetTotalAccountCount();
         }
         public async Task<IEnumerable<TransactionResponseDto>> GetTransactions(
-             int? userId = null,
-             string? transactionType = null,
-             DateTime? startDate = null,
-             DateTime? endDate = null)
+          int? userId,
+          string? transactionType,
+          BankApi.Entities.TransactionStatus? status,
+          DateTime? startDate,
+          DateTime? endDate)
         {
-            return await _bankManagerRepository.GetTransactions(userId, transactionType, startDate, endDate);
+            return await _bankManagerRepository.GetTransactions(userId, transactionType, status, startDate, endDate);
         }
 
     }

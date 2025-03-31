@@ -30,20 +30,20 @@ public class UserRepository : IUserRepository
         return await _context.Account.FirstOrDefaultAsync(a => a.AccountNumber == accountNumber);
     }
 
-
-    public async Task<bool> DepositAsync(int accountId, decimal amount ,string description )
+    public async Task<bool> RequestDepositAsync(int accountId, decimal amount, string description, TransactionStatus status)
     {
-        var account = await GetAccountByIdAsync(accountId);
-        if (account == null || amount <= 0) return false;
+        if (amount <= 0) return false;
 
-        account.Balance += amount;
+        var account = await GetAccountByIdAsync(accountId);
+        if (account == null) return false;
 
         var transaction = new Transactions
         {
             ReceiverAccountId = accountId,
             Type = TransactionType.Deposit,
             Amount = amount,
-            Description = description
+            Description = description,
+            Status = status
         };
 
         _context.Transactions.Add(transaction);
@@ -51,19 +51,20 @@ public class UserRepository : IUserRepository
         return true;
     }
 
-    public async Task<bool> WithdrawAsync(int accountId, decimal amount, string description)
+    public async Task<bool> RequestWithdrawAsync(int accountId, decimal amount, string description, TransactionStatus status)
     {
-        var account = await GetAccountByIdAsync(accountId);
-        if (account == null || amount <= 0 || account.Balance < amount) return false;
+        if (amount <= 0) return false;
 
-        account.Balance -= amount;
+        var account = await GetAccountByIdAsync(accountId);
+        if (account == null || account.Balance < amount) return false;
 
         var transaction = new Transactions
         {
             SenderAccountId = accountId,
             Type = TransactionType.Withdraw,
             Amount = amount,
-            Description = description
+            Description = description,
+            Status = status
         };
 
         _context.Transactions.Add(transaction);
@@ -71,16 +72,14 @@ public class UserRepository : IUserRepository
         return true;
     }
 
-    public async Task<bool> TransferAsync(int senderAccountId, string ReceiverAccountNumber, decimal amount, string description)
+    public async Task<bool> RequestTransferAsync(int senderAccountId, string receiverAccountNumber, decimal amount, string description, TransactionStatus status)
     {
+        if (amount <= 0) return false;
+
         var sender = await GetAccountByIdAsync(senderAccountId);
-        var receiver = await GetAccountByNumberAsync(ReceiverAccountNumber);
+        var receiver = await GetAccountByNumberAsync(receiverAccountNumber);
 
-
-        if (sender == null || receiver == null || amount <= 0 || sender.Balance < amount) return false;
-
-        sender.Balance -= amount;
-        receiver.Balance += amount;
+        if (sender == null || receiver == null || sender.Balance < amount) return false;
 
         var transaction = new Transactions
         {
@@ -88,7 +87,8 @@ public class UserRepository : IUserRepository
             ReceiverAccountId = receiver.AccountId,
             Type = TransactionType.Transfer,
             Amount = amount,
-            Description = description
+            Description = description,
+            Status = status
         };
 
         _context.Transactions.Add(transaction);
@@ -96,42 +96,45 @@ public class UserRepository : IUserRepository
         return true;
     }
 
+
     public async Task<decimal> GetBalanceAsync(int accountId)
     {
         var account = await GetAccountByIdAsync(accountId);
         return account?.Balance ?? 0;
     }
+
     public async Task<List<Transactions>> GetTransactionHistoryAsync(int accountId)
     {
         return await _context.Transactions
-            .Where(t => t.SenderAccountId == accountId || t.ReceiverAccountId == accountId) // Fetch all transactions
-            .Include(t => t.ReceiverAccount)
-            .ThenInclude(a => a.Users)
+            .Where(t => t.SenderAccountId == accountId || t.ReceiverAccountId == accountId)
+            .Include(t => t.ReceiverAccount.Users)
+            .Include(t => t.SenderAccount.Users)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
     }
 
-    public async Task<List<Transactions>> GetCustomeTransactionHistoryAsync(int accountId, DateTime? startDate, DateTime? endDate, TransactionType? type)
+    public async Task<List<Transactions>> GetCustomeTransactionHistoryAsync(int accountId, DateTime? startDate, DateTime? endDate, TransactionType? type, TransactionStatus? status)
     {
-        var query = _context.Transactions
-            .Where(t => t.SenderAccountId == accountId || t.ReceiverAccountId == accountId);
+        var query = _context.Transactions.AsQueryable();
 
-        // Apply date filter
+        query = query.Where(t => t.SenderAccountId == accountId || t.ReceiverAccountId == accountId);
+
         if (startDate.HasValue)
             query = query.Where(t => t.TransactionDate.Date >= startDate.Value.Date);
 
         if (endDate.HasValue)
             query = query.Where(t => t.TransactionDate.Date <= endDate.Value.Date);
 
-        // Apply type filter
         if (type.HasValue)
             query = query.Where(t => t.Type == type.Value);
 
+        if (status.HasValue)
+            query = query.Where(t => t.Status == status.Value);
+
         return await query
-            .Include(t => t.ReceiverAccount)
-            .ThenInclude(a => a.Users)
+            .Include(t => t.ReceiverAccount.Users)
+            .Include(t => t.SenderAccount.Users)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
     }
 }
-

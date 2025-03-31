@@ -8,13 +8,6 @@ namespace BankApi.Repositories.Interfaces
 {
     public interface IBankManagerRepository
     {
-        // Transaction Methods
-        //Task<IEnumerable<TransactionResponseDto>> GetAllTransactions();
-        //Task<IEnumerable<TransactionResponseDto>> GetTransactionsByType(string transactionType);
-        //Task<IEnumerable<TransactionResponseDto>> GetTransactionsByTypeAndDateRange(string transactionType, DateTime? startDate, DateTime? endDate);
-        //Task<IEnumerable<TransactionResponseDto>> GetTransactionsByDateRange(DateTime startDate, DateTime endDate);
-        //Task<IEnumerable<TransactionResponseDto>> GetUserTransactions(int? userId, string? email);
-        //Task<IEnumerable<TransactionResponseDto>> GetUserTransactionsByDateRange(int userId, DateTime startDate, DateTime endDate);
 
         // User & Account Details
         Task<AccountDetails> GetUserAccountDetails(int userId);
@@ -26,10 +19,11 @@ namespace BankApi.Repositories.Interfaces
         Task<AccountSummaryDto> GetTotalAccounts();
         Task<int> GetTotalAccountCount();
         Task<IEnumerable<TransactionResponseDto>> GetTransactions(
-                int? userId = null,
-                string? transactionType = null,
-                DateTime? startDate = null,
-                DateTime? endDate = null
-            );
+           int? userId,
+           string? transactionType,
+           TransactionStatus? status,
+           DateTime? startDate,
+           DateTime? endDate);
+
     }
 }

@@ -16,6 +16,7 @@ namespace BankApi.Data
         public DbSet<Account> Account { get; set; }
         public DbSet<Transactions> Transactions { get; set; }
         public DbSet<OtpVerifications> OtpVerifications { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

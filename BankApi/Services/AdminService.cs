@@ -180,6 +180,88 @@ namespace BankApi.Services
             return "304801000" + new Random().Next(10000, 99999);
         }
 
+        public async Task<(bool success, string errorMessage)> ApproveTransactionAsync(int transactionId)
+        {
+            var transaction = await _adminRepository.GetTransactionByIdAsync(transactionId);
+
+            if (transaction == null)
+                return (false, "Transaction not found.");
+
+            if (transaction.Status != TransactionStatus.Pending)
+                return (false, $"Transaction is not pending. Current status: {transaction.Status}");
+
+            Console.WriteLine($"Transaction {transaction.TransactionId}: Type = {transaction.Type}, Amount = {transaction.Amount}");
+
+            Console.WriteLine($"SenderAccountId: {(transaction.SenderAccountId.HasValue ? transaction.SenderAccountId.ToString() : "NULL")}");
+            Console.WriteLine($"ReceiverAccountId: {(transaction.ReceiverAccountId.HasValue ? transaction.ReceiverAccountId.ToString() : "NULL")}");
+
+            var sender = transaction.SenderAccountId.HasValue && transaction.SenderAccountId.Value > 0
+                ? await _adminRepository.GetAccountByUserIdAsync(transaction.SenderAccountId.Value)
+                : null;
+
+            var receiver = transaction.ReceiverAccountId.HasValue && transaction.ReceiverAccountId.Value > 0
+                ? await _adminRepository.GetAccountByUserIdAsync(transaction.ReceiverAccountId.Value)
+                : null;
+
+            Console.WriteLine($"Sender: {(sender != null ? sender.AccountId.ToString() : "NULL")}, Receiver: {(receiver != null ? receiver.AccountId.ToString() : "NULL")}");
+
+            if (transaction.Type == TransactionType.Deposit)
+            {
+                if (receiver == null)
+                    return (false, "Receiver account is missing for deposit.");
+
+                receiver.Balance += transaction.Amount;
+                await _adminRepository.UpdateAccountAsync(receiver);
+            }
+            else if (transaction.Type == TransactionType.Withdraw)
+            {
+                if (sender == null)
+                    return (false, "Sender account is missing for withdrawal.");
+
+                if (sender.Balance < transaction.Amount)
+                    return (false, "Insufficient funds for withdrawal.");
+
+                sender.Balance -= transaction.Amount;
+                await _adminRepository.UpdateAccountAsync(sender);
+            }
+            else if (transaction.Type == TransactionType.Transfer)
+            {
+                if (sender == null || receiver == null)
+                    return (false, "Both sender and receiver accounts are required for transfer.");
+
+                if (sender.Balance < transaction.Amount)
+                    return (false, "Insufficient funds for transfer.");
+
+                sender.Balance -= transaction.Amount;
+                receiver.Balance += transaction.Amount;
+                await _adminRepository.UpdateAccountAsync(sender);
+                await _adminRepository.UpdateAccountAsync(receiver);
+            }
+            else
+            {
+                return (false, "Invalid transaction type.");
+            }
+
+            transaction.Status = TransactionStatus.Approved;
+            await _adminRepository.UpdateTransactionAsync(transaction);
+
+            Console.WriteLine($"Transaction {transactionId} approved successfully.");
+            return (true, null);
+        }
+
+
+
+        public async Task<bool> RejectTransactionAsync(int transactionId, string reason)
+        {
+            var transaction = await _adminRepository.GetTransactionByIdAsync(transactionId);
+            if (transaction == null || transaction.Status != TransactionStatus.Pending)
+                return false;
+
+            transaction.Status = TransactionStatus.Rejected;
+            transaction.Reason = reason;
+            await _adminRepository.UpdateTransactionAsync(transaction);
+            return true;
+        }
         //Get The Users with Verify Email and Approve Account
         public async Task<IEnumerable<UserStatusDto>> GetAllUsersWithStatusAsync()
         {
@@ -191,7 +273,8 @@ namespace BankApi.Services
                 {
                     UserId = u.UserId,
                     FullName = $"{u.FirstName} {u.LastName}",
-                    RoleName = u.RoleMaster.RoleName,
+                    Address = u.Address,
+                    AccountType = u.AccountType,
                     Email = u.Email,
                     RequestStatus = u.RequestStatus,
                     IsEmailVerified = u.IsEmailVerified,
@@ -220,6 +303,10 @@ namespace BankApi.Services
             var users = await _adminRepository.GetApproveOrRejectedAccountsAsync();
             return _mapper.Map<List<UserResponseDto>>(users);
         }
-
+        public async Task<List<TransactionResponseDto>> GetPendingTransactionsAsync()
+        {
+            var transactions = await _adminRepository.GetTransactionsByStatusAsync(TransactionStatus.Pending);
+            return _mapper.Map<List<TransactionResponseDto>>(transactions);
+        }
     }
 }

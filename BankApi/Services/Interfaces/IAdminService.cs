@@ -30,5 +30,8 @@ namespace BankApi.Services.Interfaces
 
         //account 
         Task<List<UserResponseDto>> GetApprovedAccountsAsync();
+        Task<(bool success, string errorMessage)> ApproveTransactionAsync(int transactionId);
+        Task<List<TransactionResponseDto>> GetPendingTransactionsAsync();
+        Task<bool> RejectTransactionAsync(int transactionId, string reason);
     }
 }
