@@ -1,9 +1,10 @@
-﻿using BankApi.Dto;
+﻿using BankApi.Attributes;
+using BankApi.Dto;
 using BankApi.Dto.Request;
 using BankApi.Dto.Response;
 using BankApi.Entities;
+using BankApi.Enums;
 using BankApi.Services.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -22,24 +23,25 @@ namespace BankApi.Controllers
             _adminService = adminService ?? throw new ArgumentNullException(nameof(adminService));
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpGet("roles")]
+        [PermissionAuthorize(nameof(PermissionEnum.ViewRoles))]
         public async Task<ActionResult<IEnumerable<RoleResponseDto>>> GetRoles()
         {
             var roles = await _adminService.GetRolesAsync();
             return Ok(roles);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPost("roles")]
+        [PermissionAuthorize(nameof(PermissionEnum.CreateRole))]
         public async Task<ActionResult<RoleResponseDto>> CreateRole([FromBody] RoleRequestDto roleDto)
         {
-            var createdRole = await _adminService.CreateRoleAsync(roleDto.RoleName);
-            return CreatedAtAction(nameof(GetRoles), createdRole);
+            var creatorRoleId = int.Parse(User.FindFirst("RoleId")?.Value ?? "0");
+            var createdRole = await _adminService.CreateRoleAsync(roleDto.RoleName, creatorRoleId);
+            return CreatedAtAction(nameof(GetRoles), new { roleId = createdRole.RoleId }, createdRole);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpDelete("roles/{roleId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.DeleteRole))]
         public async Task<IActionResult> DeleteRole(int roleId)
         {
             var result = await _adminService.DeleteRoleAsync(roleId);
@@ -47,30 +49,28 @@ namespace BankApi.Controllers
             return NoContent();
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpGet("managers")]
+        [PermissionAuthorize(nameof(PermissionEnum.ViewUsers))]
         public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetBankManagers()
         {
             var managers = await _adminService.GetBankManagersAsync();
             return Ok(managers);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPost("managers")]
+        [PermissionAuthorize(nameof(PermissionEnum.CreateManager))]
         public async Task<ActionResult<UserResponseDto>> CreateBankManager([FromBody] BankManagerDto managerDto)
         {
             var createdManager = await _adminService.CreateBankManagerAsync(managerDto);
             return CreatedAtAction(nameof(GetBankManagers), createdManager);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPost("verify-otp")]
+        [PermissionAuthorize(nameof(PermissionEnum.VerifyManager))]
         public async Task<IActionResult> VerifyOtp([FromBody] OtpVerificationDto request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Otp))
-            {
                 return BadRequest(new { Message = "Invalid OTP data." });
-            }
 
             try
             {
@@ -83,32 +83,32 @@ namespace BankApi.Controllers
             }
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpPost("approve-account")]
+        [PermissionAuthorize(nameof(PermissionEnum.ApproveAccount))]
         public async Task<IActionResult> ApproveAccount([FromBody] ApproveAccountDto request, AccountType accountType, string? rejectedReason)
         {
             var result = await _adminService.ApproveAccountRequest(request.UserId, request.IsApproved, accountType, rejectedReason);
             return Ok(result);
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpGet("users-status")]
+        [PermissionAuthorize(nameof(PermissionEnum.ViewUsers))]
         public async Task<IActionResult> GetUsersWithStatus()
         {
             var users = await _adminService.GetAllUsersWithStatusAsync();
             return Ok(users);
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpGet("users")]
+        [PermissionAuthorize(nameof(PermissionEnum.ViewUsers))]
         public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetAllUsersExceptAdmin()
         {
             var users = await _adminService.GetAllUsersExceptAdminAsync();
             return Ok(users);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpPut("users/{userId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.UpdateUser))]
         public async Task<ActionResult<UserResponseDto>> UpdateUser(int userId, [FromBody] BankMangerUpdateDto dto)
         {
             var updatedUser = await _adminService.UpdateUserAsync(userId, dto);
@@ -116,8 +116,8 @@ namespace BankApi.Controllers
             return Ok(updatedUser);
         }
 
-        [Authorize(Policy = "SuperAdminOnly")]
         [HttpDelete("users/{userId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.DeleteUser))]
         public async Task<IActionResult> DeleteUser(int userId)
         {
             var result = await _adminService.DeleteUserAsync(userId);
@@ -125,24 +125,16 @@ namespace BankApi.Controllers
             return NoContent();
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
-        [HttpGet("approved-accounts")]
-        public async Task<IActionResult> GetApprovedAccounts()
-        {
-            var accounts = await _adminService.GetApprovedAccountsAsync();
-            return Ok(accounts);
-        }
-
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpGet("pending-transactions")]
+        [PermissionAuthorize(nameof(PermissionEnum.ViewPendingTransactions))]
         public async Task<ActionResult<List<TransactionResponseDto>>> GetPendingTransactions()
         {
             var transactions = await _adminService.GetPendingTransactionsAsync();
             return Ok(transactions);
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpPost("approve/{transactionId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.ApproveTransaction))]
         public async Task<IActionResult> ApproveTransaction(int transactionId)
         {
             var result = await _adminService.ApproveTransactionAsync(transactionId);
@@ -154,8 +146,8 @@ namespace BankApi.Controllers
             return Ok("Transaction approved successfully.");
         }
 
-        [Authorize(Policy = "SuperAdminOrBankManager")]
         [HttpPost("reject/{transactionId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.RejectTransaction))]
         public async Task<IActionResult> RejectTransaction(int transactionId, [FromBody] string reason)
         {
             var result = await _adminService.RejectTransactionAsync(transactionId, reason);

@@ -2,18 +2,14 @@
 
 namespace BankApi.Entities
 {
-    public class RoleMaster
+    public class Permissions
     {
         [Key]
-        public int RoleId { get; set; }
+        public int PermissionId { get; set; }
 
         [Required]
-        [StringLength(50)]
-        public string RoleName { get; set; } = string.Empty;
-
+        [StringLength(100)]
+        public string PermissionName { get; set; } = string.Empty;
         public ICollection<RolePermissions> RolePermissions { get; set; } = new List<RolePermissions>();
-
-        public ICollection<Users> Users { get; set; }
     }
-
 }

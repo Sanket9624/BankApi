@@ -12,7 +12,7 @@ namespace BankApi.Services.Interfaces
         // Admin
 
         // Roles
-        Task<RoleRequestDto> CreateRoleAsync(string roleName);
+        Task<RoleResponseDto> CreateRoleAsync(string roleName, int creatorRoleId);
         Task<bool> DeleteRoleAsync(int roleId);
         Task<List<RoleResponseDto>> GetRolesAsync();
 

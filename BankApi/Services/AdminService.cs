@@ -35,18 +35,24 @@ namespace BankApi.Services
         }
 
 
-    //Roles CRUD Opereation
-        
+        //Roles CRUD Opereation
+
         //Create Role
-        public async Task<RoleRequestDto> CreateRoleAsync(string roleName)
+
+        public async Task<RoleResponseDto> CreateRoleAsync(string roleName, int creatorRoleId)
         {
-            var existingRole = await _authRepository.GetRoleByNameAsync(roleName);
-            if (existingRole != null) throw new Exception("Role already exists.");
+            // ✅ Ensure the requesting user has permission to create roles
+            var hasPermission = await _adminRepository.HasPermission(creatorRoleId, "CreateRole");
+            if (!hasPermission)
+                throw new UnauthorizedAccessException("You do not have permission to create roles.");
 
             var role = new RoleMaster { RoleName = roleName };
+
             var createdRole = await _adminRepository.CreateRoleAsync(role);
-            return _mapper.Map<RoleRequestDto>(createdRole);
+
+            return _mapper.Map<RoleResponseDto>(createdRole);
         }
+
 
         //Get Role
         public async Task<List<RoleResponseDto>> GetRolesAsync()

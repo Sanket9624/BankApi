@@ -22,6 +22,12 @@ namespace BankApi.Repositories
 
         //1.Role Related Operation
 
+        // Check if the role has permission to perform an action
+        public async Task<bool> HasPermission(int roleId, string permissionName)
+        {
+            return await _context.RolePermissions
+                .AnyAsync(rp => rp.RoleId == roleId && rp.Permissions.PermissionName == permissionName);
+        }
         //Create a New Role
         public async Task<RoleMaster> CreateRoleAsync(RoleMaster role)
         {
@@ -41,11 +47,11 @@ namespace BankApi.Repositories
         //Delete existing Role
         public async Task<bool> DeleteRoleAsync(int roleId)
         {
-            //prevent deletion of essential Roles
-            if (roleId <= 3) return false;
-            var role = await _context.RoleMaster.FindAsync(roleId);
-            if (role == null) return false;
+            var hasPermission = await HasPermission(1, "DeleteRole");
+            if (!hasPermission) return false;
 
+            var role = await _context.RoleMaster.FindAsync(roleId);
+            if (role == null || roleId <= 3) return false; // Prevent deleting essential roles
             _context.RoleMaster.Remove(role);
             await _context.SaveChangesAsync();
             return true;

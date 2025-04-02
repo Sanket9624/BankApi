@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BankApi.Migrations
 {
     [DbContext(typeof(BankDb1Context))]
-    [Migration("20250321092112_Change")]
-    partial class Change
+    [Migration("20250401124612_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -81,27 +81,89 @@ namespace BankApi.Migrations
                     b.ToTable("OtpVerifications");
                 });
 
-            modelBuilder.Entity("BankApi.Entities.PasswordResetToken", b =>
+            modelBuilder.Entity("BankApi.Entities.Permissions", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("PermissionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
 
-                    b.Property<DateTime>("ExpiryTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Token")
+                    b.Property<string>("PermissionName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.HasKey("PermissionId");
 
-                    b.HasKey("Id");
+                    b.ToTable("Permissions");
 
-                    b.ToTable("PasswordResetTokens");
+                    b.HasData(
+                        new
+                        {
+                            PermissionId = 1,
+                            PermissionName = "CreateRole"
+                        },
+                        new
+                        {
+                            PermissionId = 2,
+                            PermissionName = "DeleteRole"
+                        },
+                        new
+                        {
+                            PermissionId = 3,
+                            PermissionName = "ViewRoles"
+                        },
+                        new
+                        {
+                            PermissionId = 4,
+                            PermissionName = "CreateManager"
+                        },
+                        new
+                        {
+                            PermissionId = 5,
+                            PermissionName = "DeleteManager"
+                        },
+                        new
+                        {
+                            PermissionId = 6,
+                            PermissionName = "VerifyManager"
+                        },
+                        new
+                        {
+                            PermissionId = 7,
+                            PermissionName = "ApproveAccount"
+                        },
+                        new
+                        {
+                            PermissionId = 8,
+                            PermissionName = "ViewUsers"
+                        },
+                        new
+                        {
+                            PermissionId = 9,
+                            PermissionName = "UpdateUser"
+                        },
+                        new
+                        {
+                            PermissionId = 10,
+                            PermissionName = "DeleteUser"
+                        },
+                        new
+                        {
+                            PermissionId = 11,
+                            PermissionName = "ApproveTransaction"
+                        },
+                        new
+                        {
+                            PermissionId = 12,
+                            PermissionName = "RejectTransaction"
+                        },
+                        new
+                        {
+                            PermissionId = 13,
+                            PermissionName = "ViewPendingTransactions"
+                        });
                 });
 
             modelBuilder.Entity("BankApi.Entities.RoleMaster", b =>
@@ -137,6 +199,24 @@ namespace BankApi.Migrations
                             RoleId = 3,
                             RoleName = "Customer"
                         });
+                });
+
+            modelBuilder.Entity("BankApi.Entities.RolePermissions", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RolePermissionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("BankApi.Entities.Transactions", b =>
@@ -288,6 +368,25 @@ namespace BankApi.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BankApi.Entities.RolePermissions", b =>
+                {
+                    b.HasOne("BankApi.Entities.Permissions", "Permissions")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BankApi.Entities.RoleMaster", "RoleMaster")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permissions");
+
+                    b.Navigation("RoleMaster");
+                });
+
             modelBuilder.Entity("BankApi.Entities.Transactions", b =>
                 {
                     b.HasOne("BankApi.Entities.Account", "ReceiverAccount")
@@ -310,14 +409,21 @@ namespace BankApi.Migrations
                     b.HasOne("BankApi.Entities.RoleMaster", "RoleMaster")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("RoleMaster");
                 });
 
+            modelBuilder.Entity("BankApi.Entities.Permissions", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("BankApi.Entities.RoleMaster", b =>
                 {
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("Users");
                 });
 

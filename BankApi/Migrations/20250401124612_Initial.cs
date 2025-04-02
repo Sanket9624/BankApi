@@ -8,11 +8,24 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BankApi.Migrations
 {
     /// <inheritdoc />
-    public partial class iNitial : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Permissions",
+                columns: table => new
+                {
+                    PermissionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PermissionName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Permissions", x => x.PermissionId);
+                });
+
             migrationBuilder.CreateTable(
                 name: "RoleMaster",
                 columns: table => new
@@ -24,6 +37,31 @@ namespace BankApi.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RoleMaster", x => x.RoleId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RolePermissions",
+                columns: table => new
+                {
+                    RoleId = table.Column<int>(type: "int", nullable: false),
+                    PermissionId = table.Column<int>(type: "int", nullable: false),
+                    RolePermissionId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RolePermissions", x => new { x.RoleId, x.PermissionId });
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
+                        principalColumn: "PermissionId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_RoleMaster_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "RoleMaster",
+                        principalColumn: "RoleId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -39,14 +77,14 @@ namespace BankApi.Migrations
                     MobileNo = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
                     Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    AccountType = table.Column<int>(type: "int", nullable: false),
+                    AccountType = table.Column<string>(type: "nvarchar(10)", nullable: false),
                     RoleId = table.Column<int>(type: "int", nullable: false),
                     IsEmailVerified = table.Column<bool>(type: "bit", nullable: false),
                     TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
                     ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RejectedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RejectionReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RequestStatus = table.Column<int>(type: "int", nullable: false),
+                    RequestStatus = table.Column<string>(type: "nvarchar(10)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -60,7 +98,7 @@ namespace BankApi.Migrations
                         column: x => x.RoleId,
                         principalTable: "RoleMaster",
                         principalColumn: "RoleId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -139,6 +177,26 @@ namespace BankApi.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "Permissions",
+                columns: new[] { "PermissionId", "PermissionName" },
+                values: new object[,]
+                {
+                    { 1, "CreateRole" },
+                    { 2, "DeleteRole" },
+                    { 3, "ViewRoles" },
+                    { 4, "CreateManager" },
+                    { 5, "DeleteManager" },
+                    { 6, "VerifyManager" },
+                    { 7, "ApproveAccount" },
+                    { 8, "ViewUsers" },
+                    { 9, "UpdateUser" },
+                    { 10, "DeleteUser" },
+                    { 11, "ApproveTransaction" },
+                    { 12, "RejectTransaction" },
+                    { 13, "ViewPendingTransactions" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "RoleMaster",
                 columns: new[] { "RoleId", "RoleName" },
                 values: new object[,]
@@ -158,6 +216,11 @@ namespace BankApi.Migrations
                 name: "IX_OtpVerifications_UserId",
                 table: "OtpVerifications",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RolePermissions_PermissionId",
+                table: "RolePermissions",
+                column: "PermissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_ReceiverAccountId",
@@ -182,7 +245,13 @@ namespace BankApi.Migrations
                 name: "OtpVerifications");
 
             migrationBuilder.DropTable(
+                name: "RolePermissions");
+
+            migrationBuilder.DropTable(
                 name: "Transactions");
+
+            migrationBuilder.DropTable(
+                name: "Permissions");
 
             migrationBuilder.DropTable(
                 name: "Account");

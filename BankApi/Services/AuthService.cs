@@ -59,8 +59,11 @@ namespace BankApi.Services
             if (user == null || !PasswordUtility.VerifyPassword(loginDto.Password, user.PasswordHash))
                 throw new Exception("Invalid email or password");
 
-            if (!user.IsEmailVerified) throw new Exception("User is not verified. Please verify your email.");
-            if (user.RequestStatus != RequestStatus.Approved) throw new Exception("Your account is pending approval by an admin.");
+            if (!user.IsEmailVerified)
+                throw new Exception("User is not verified. Please verify your email.");
+
+            if (user.RequestStatus != RequestStatus.Approved)
+                throw new Exception("Your account is pending approval by an admin.");
 
             if (user.TwoFactorEnabled)
             {
@@ -68,10 +71,12 @@ namespace BankApi.Services
                 return "OTP Sent for Verification. Please verify OTP to proceed.";
             }
 
-            return _jwtTokenGenerator.GenerateToken(user.UserId, user.Email, user.RoleId);
+            // ✅ Await the token generation since it's now async
+            return await _jwtTokenGenerator.GenerateToken(user.UserId, user.Email, user.RoleId);
         }
 
-    //Get User Detail By Id 
+
+        //Get User Detail By Id 
         public async Task<UserWithAccountDto> GetUserByIdAsync(int userId)
         {
             var user = await _authRepository.GetUserByIdAsync(userId);

@@ -1,5 +1,7 @@
 ﻿using System.Transactions;
+using BankApi.Attributes;
 using BankApi.Dto;
+using BankApi.Enums;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace BankingManagementSystem.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Policy = "SuperAdminOrBankManager")]
     [ApiController]
     public class BankManagerController : ControllerBase
     {
@@ -19,6 +20,7 @@ namespace BankingManagementSystem.Controllers
         }
 
         [HttpGet("summary")]
+        [PermissionAuthorize(nameof(PermissionEnum.BankSummary))]
         public async Task<IActionResult> GetBankSummary()
         {
             try
@@ -36,6 +38,7 @@ namespace BankingManagementSystem.Controllers
         }
 
         [HttpGet("user-account/{userId}")]
+        [PermissionAuthorize(nameof(PermissionEnum.GetUserAccountDetails))]
         public async Task<IActionResult> GetUserAccountDetails(int userId)
         {
             try
@@ -53,6 +56,7 @@ namespace BankingManagementSystem.Controllers
         }
 
         [HttpGet("account/{accountNumber}")]
+        [PermissionAuthorize(nameof(PermissionEnum.GetUserDetailsByAccountNumber))]
         public async Task<IActionResult> GetUserDetailsByAccountNumber(string accountNumber)
         {
             try
@@ -70,6 +74,7 @@ namespace BankingManagementSystem.Controllers
         }
 
         [HttpGet("email/{email}")]
+        [PermissionAuthorize(nameof(PermissionEnum.GetUserDetailsByEmail))]
         public async Task<IActionResult> GetUserDetailsByEmail(string email)
         {
             try
@@ -87,6 +92,7 @@ namespace BankingManagementSystem.Controllers
         }
 
       [HttpGet("total-accounts")]
+      [PermissionAuthorize(nameof(PermissionEnum.GetTotalAccounts))]
         public async Task<IActionResult> GetTotalAccounts()
         {
             var result = await _bankManagerService.GetTotalAccounts();
@@ -94,6 +100,7 @@ namespace BankingManagementSystem.Controllers
         }
 
         [HttpGet("transactions")]
+        [PermissionAuthorize(nameof(PermissionEnum.GetTransactions))]
         public async Task<IActionResult> GetTransactions(
             [FromQuery] int? userId,
             [FromQuery] string? transactionType,

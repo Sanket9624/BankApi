@@ -10,9 +10,10 @@ namespace BankApi.Repositories.Interfaces
     {
 
         // Role Management
+        Task<bool> HasPermission(int roleId, string permissionName);
         Task<RoleMaster> CreateRoleAsync(RoleMaster role);
         Task<List<RoleMaster>> GetRolesAsync();
-        Task<bool> GetRoleByIdAsync(int roleId);
+        Task<bool> GetRoleByIdAsync(int roleId); 
         Task<bool> DeleteRoleAsync(int roleId);
 
         // Manager Management

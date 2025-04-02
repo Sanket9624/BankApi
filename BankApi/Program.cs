@@ -12,6 +12,7 @@ using BankApi.Repositories;
 using BankApi.Entities;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using System.Security.Cryptography;
+using BankApi.Enums;
 
 namespace BankApi
 {
@@ -123,7 +124,7 @@ namespace BankApi
         }
 
         // ✅ Register Services & Repositories
-        private static void RegisterServices(WebApplicationBuilder builder)
+        public static void RegisterServices(WebApplicationBuilder builder)
         {
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
             builder.Services.AddScoped<IAuthService, AuthService>();
@@ -135,7 +136,10 @@ namespace BankApi
             builder.Services.AddScoped<IAdminRepository, AdminRepository>();
             builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();  // Add this line
+            builder.Services.AddScoped<IPermissionService, PermissionService>(); // Add this line
         }
+
 
         // ✅ Configure Database Context
         private static void ConfigureDatabase(WebApplicationBuilder builder)
@@ -179,16 +183,42 @@ namespace BankApi
         }
 
         // ✅ Ensure SuperAdmin Exists When App Starts
-        private static void EnsureSuperAdminExists(WebApplication app)
+        private static async Task EnsureSuperAdminExists(WebApplication app)
         {
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
             var context = services.GetRequiredService<BankDb1Context>();
+            //var roleRepository = services.GetRequiredService<IRoleRepository>();
+            var permissionRepository = services.GetRequiredService<IPermissionRepository>();
+            var rolePermissionService = services.GetRequiredService<IPermissionService>(); // Assuming this handles permission assignments
 
             try
             {
-                context.Database.Migrate(); // Ensure database is up-to-date
+                context.Database.Migrate(); // Ensure the latest migrations are applied
 
+                // ✅ Ensure Permissions Exist
+                if (!context.Permissions.Any())
+                {
+                    Console.WriteLine("✅ Seeding Permissions Data...");
+                    List<Permissions> permissions = new List<Permissions>();
+                    foreach (PermissionEnum permission in Enum.GetValues(typeof(PermissionEnum)))
+                    {
+                        permissions.Add(new Permissions
+                        {
+                            PermissionId = (int)permission,
+                            PermissionName = permission.ToString()
+                        });
+                    }
+                    context.Permissions.AddRange(permissions);
+                    context.SaveChanges();
+                    Console.WriteLine("✅ Permissions seeded successfully.");
+                }
+                else
+                {
+                    Console.WriteLine("✅ Permissions already exist.");
+                }
+
+                // ✅ Ensure SuperAdmin Role Exists
                 var superAdminRole = context.RoleMaster.FirstOrDefault(r => r.RoleName == "SuperAdmin");
                 if (superAdminRole == null)
                 {
@@ -197,6 +227,7 @@ namespace BankApi
                     context.SaveChanges();
                 }
 
+                // ✅ Ensure SuperAdmin User Exists
                 var superAdmin = context.Users.FirstOrDefault(u => u.RoleId == superAdminRole.RoleId);
                 if (superAdmin == null)
                 {
@@ -213,7 +244,7 @@ namespace BankApi
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                         IsEmailVerified = true,
-                        TwoFactorEnabled = true,
+                        TwoFactorEnabled = false,
                         RequestStatus = RequestStatus.Approved,
                     };
 
@@ -225,11 +256,33 @@ namespace BankApi
                 {
                     Console.WriteLine("✅ SuperAdmin already exists.");
                 }
+
+                // ✅ Ensure Admin Role Has All Permissions Assigned
+                var allPermissions = context.Permissions.Select(p => p.PermissionId).ToList();
+                var assignedPermissions = context.RolePermissions
+                    .Where(rp => rp.RoleId == superAdminRole.RoleId)
+                    .Select(rp => rp.PermissionId)
+                    .ToList();
+
+                // Get permissions that are not assigned
+                var permissionsToAssign = allPermissions.Except(assignedPermissions).ToList();
+
+                if (permissionsToAssign.Any())
+                {
+                    await rolePermissionService.AssignPermissionsToRoleAsync(superAdminRole.RoleId, permissionsToAssign);
+                    Console.WriteLine($"✅ Assigned missing permissions to SuperAdmin: {permissionsToAssign.Count} permissions.");
+                }
+                else
+                {
+                    Console.WriteLine("✅ SuperAdmin already has all permissions assigned.");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error creating SuperAdmin: {ex.Message}");
+                Console.WriteLine($"❌ Error seeding data: {ex.Message}");
             }
         }
+
+
     }
 }

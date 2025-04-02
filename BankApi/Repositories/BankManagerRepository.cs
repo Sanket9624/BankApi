@@ -92,7 +92,7 @@ namespace BankApi.Repositories
         public async Task<int> GetTotalAccountCount()
         {
             using var connection = CreateConnection();
-            return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM Accounts");
+            return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM Account");
         }
 
         // Get Transactions
