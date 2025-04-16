@@ -1,17 +1,18 @@
 ﻿using BankApi.Data;
+using BankApi.Repositories;
 using BankApi.Repositories.Interfaces;
-using BankApi.Services.Interfaces;
 using BankApi.Services;
+using BankApi.Services.Interfaces;
+using BankApi.Entities;
+using BankApi.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OpenApi.Models;
+using System.Text;
 using System.Text.Json.Serialization;
-using BankApi.Repositories;
-using BankApi.Entities;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BankApi
 {
@@ -21,35 +22,49 @@ namespace BankApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // ✅ Get JWT key from appsettings.json
-            var jwtKey = builder.Configuration["JWT:Key"];
-            if (string.IsNullOrEmpty(jwtKey))
-            {
-                throw new InvalidOperationException("JWT Key is missing in appsettings.json");
-            }
-
+            // 🔐 JWT Key
+            var jwtKey = builder.Configuration["JWT:Key"]
+                ?? throw new InvalidOperationException("JWT Key is missing in appsettings.json");
             var key = Encoding.ASCII.GetBytes(jwtKey);
 
+            // 🔧 Service Registrations
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+            builder.Services.AddAuthorization(options =>
+            {
+                foreach (var permission in Enum.GetValues(typeof(Permissions)))
+                {
+                    var policyName = permission.ToString();
+                    options.AddPolicy(policyName, policy =>
+                        policy.Requirements.Add(new PermissionRequirement((Permissions)permission)));
+                }
 
-            ConfigureCors(builder);
-            ConfigureAuth(builder, key);
-            RegisterServices(builder);
-            ConfigureDatabase(builder);
+                // Add branch-based policies
+                options.AddPolicy("BranchAdminOnly", policy => policy.RequireClaim("RoleId", "1", "2") 
+                    .RequireClaim("BranchId"));
 
+                options.AddPolicy("BankAdminOnly", policy => policy.RequireClaim("RoleId", "1") 
+                    .RequireClaim("BankId"));
+            });
 
+            RegisterCustomServices(builder.Services);
+            ConfigureCors(builder.Services);
+            ConfigureAuthentication(builder.Services, key);
+            ConfigureAuthorization(builder.Services);
+            ConfigureDatabase(builder.Services, builder.Configuration);
+            ConfigureSwagger(builder.Services);
 
+            // 🧾 JSON Enum Converter
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
-            ConfigureSwagger(builder);
-
             var app = builder.Build();
 
+            // 🚀 Initial Setup
             EnsureSuperAdminExists(app);
+            EnsurePermissionsInitialized(app);
 
             if (app.Environment.IsDevelopment())
             {
@@ -58,18 +73,21 @@ namespace BankApi
                 app.UseSwaggerUI();
             }
 
+            // ⚙️ Middleware
             app.UseCors("AllowSpecificOrigin");
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
+
             app.Run();
         }
 
-        // ✅ CORS Configuration
-        private static void ConfigureCors(WebApplicationBuilder builder)
+        #region Configuration Methods
+
+        private static void ConfigureCors(IServiceCollection services)
         {
-            builder.Services.AddCors(options =>
+            services.AddCors(options =>
             {
                 options.AddPolicy("AllowSpecificOrigin", policy =>
                 {
@@ -81,12 +99,9 @@ namespace BankApi
             });
         }
 
-
-
-        // ✅ Authentication & Authorization Configuration
-        private static void ConfigureAuth(WebApplicationBuilder builder, byte[] key)
+        private static void ConfigureAuthentication(IServiceCollection services, byte[] key)
         {
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.RequireHttpsMetadata = false;
@@ -99,8 +114,11 @@ namespace BankApi
                         ValidateAudience = false
                     };
                 });
+        }
 
-            builder.Services.AddAuthorization(options =>
+        private static void ConfigureAuthorization(IServiceCollection services)
+        {
+            services.AddAuthorization(options =>
             {
                 options.AddPolicy("CustomerOnly", policy => policy.RequireClaim("RoleId", "3"));
                 options.AddPolicy("BankManagerOnly", policy => policy.RequireClaim("RoleId", "2"));
@@ -108,46 +126,35 @@ namespace BankApi
 
                 options.AddPolicy("AllUsers", policy =>
                     policy.RequireAssertion(context =>
-                        context.User.HasClaim("RoleId", "3") ||
                         context.User.HasClaim("RoleId", "1") ||
-                        context.User.HasClaim("RoleId", "2")
-                    )
-                );
+                        context.User.HasClaim("RoleId", "2") ||
+                        context.User.HasClaim("RoleId", "3")
+                    ));
+
                 options.AddPolicy("SuperAdminOrBankManager", policy =>
                     policy.RequireAssertion(context =>
                         context.User.HasClaim("RoleId", "1") ||
                         context.User.HasClaim("RoleId", "2")
-                    )
-                );
+                    ));
+
+                // Policies for branch-level and bank-level authorization
+                options.AddPolicy("BranchAdminOnly", policy => policy.RequireClaim("RoleId", "1", "2") // Admin or Bank Manager
+                    .RequireClaim("BranchId"));
+
+                options.AddPolicy("BankAdminOnly", policy => policy.RequireClaim("RoleId", "1") // Only Admin
+                    .RequireClaim("BankId"));
             });
         }
 
-        // ✅ Register Services & Repositories
-        private static void RegisterServices(WebApplicationBuilder builder)
+        private static void ConfigureDatabase(IServiceCollection services, IConfiguration config)
         {
-            builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-            builder.Services.AddScoped<IUserRepository, UserRepository>();
-            builder.Services.AddScoped<IBankManagerRepository, BankManagerRepository>();
-            builder.Services.AddScoped<IBankManagerService, BankManagerService>();
-            builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IAdminRepository, AdminRepository>();
-            builder.Services.AddScoped<IAdminService, AdminService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
+            services.AddDbContext<BankDb1Context>(options =>
+                options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
         }
 
-        // ✅ Configure Database Context
-        private static void ConfigureDatabase(WebApplicationBuilder builder)
+        private static void ConfigureSwagger(IServiceCollection services)
         {
-            builder.Services.AddDbContext<BankDb1Context>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-        }
-
-        // ✅ Swagger Configuration
-        private static void ConfigureSwagger(WebApplicationBuilder builder)
-        {
-            builder.Services.AddSwaggerGen(c =>
+            services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bank API", Version = "v1" });
 
@@ -172,27 +179,80 @@ namespace BankApi
                                 Id = "Bearer"
                             }
                         },
-                        new string[] {}
+                        new string[] { }
                     }
                 });
             });
         }
 
-        // ✅ Ensure SuperAdmin Exists When App Starts
+        private static void RegisterCustomServices(IServiceCollection services)
+        {
+            // Repositories
+            services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IAdminRepository, AdminRepository>();
+            services.AddScoped<IBankManagerRepository, BankManagerRepository>();
+            services.AddScoped<IBranchRepository, BranchRepository>();
+            services.AddScoped<IBankRepository, BankRepository>();
+
+
+            // Services
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IBankManagerService, BankManagerService>();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+            services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+            services.AddScoped<IBankService, BankService>();
+            services.AddScoped<IBranchService, BranchService>();
+
+        }
+
+        #endregion
+
+        #region Initialization Methods
+
         private static void EnsureSuperAdminExists(WebApplication app)
         {
             using var scope = app.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var context = services.GetRequiredService<BankDb1Context>();
+            var context = scope.ServiceProvider.GetRequiredService<BankDb1Context>();
 
             try
             {
-                context.Database.Migrate(); // Ensure database is up-to-date
+                context.Database.Migrate();
 
-                var superAdminRole = context.RoleMaster.FirstOrDefault(r => r.RoleName == "SuperAdmin");
-                if (superAdminRole == null)
+                // Create default bank if not exists
+                var defaultBank = context.Banks.FirstOrDefault(b => b.Name == "Indigo Bank");
+                if (defaultBank == null)
                 {
-                    superAdminRole = new RoleMaster { RoleName = "SuperAdmin" };
+                    defaultBank = new Bank { Name = "Indigo Bank" , Address = "Ahmedabad" };
+                    context.Banks.Add(defaultBank);
+                    context.SaveChanges();
+                    Console.WriteLine("🏦 Default bank created.");
+                }
+
+                // Create default branch if not exists
+                var defaultBranch = context.Branches.FirstOrDefault(b => b.Name == "Main Branch" && b.BankId == defaultBank.BankId);
+                if (defaultBranch == null)
+                {
+                    defaultBranch = new Branch
+                    {
+                        Name = "Main Branch",
+                        Address = "Headquarters",
+                        BankId = defaultBank.BankId
+                    };
+                    context.Branches.Add(defaultBranch);
+                    context.SaveChanges();
+                    Console.WriteLine("🏢 Default branch created.");
+                }
+
+                var superAdminRole = context.RoleMaster.FirstOrDefault(r => r.RoleName == "SuperAdmin")
+                    ?? new RoleMaster { RoleName = "SuperAdmin" };
+
+                if (superAdminRole.RoleId == 0)
+                {
                     context.RoleMaster.Add(superAdminRole);
                     context.SaveChanges();
                 }
@@ -213,8 +273,10 @@ namespace BankApi
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                         IsEmailVerified = true,
-                        TwoFactorEnabled = true,
+                        TwoFactorEnabled = false,
                         RequestStatus = RequestStatus.Approved,
+                        BranchId = defaultBranch.BranchId ?? 0,  // Assigning default branch
+                       
                     };
 
                     context.Users.Add(newSuperAdmin);
@@ -231,5 +293,61 @@ namespace BankApi
                 Console.WriteLine($"❌ Error creating SuperAdmin: {ex.Message}");
             }
         }
+
+
+        private static void EnsurePermissionsInitialized(WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<BankDb1Context>();
+
+            try
+            {
+                var superAdminRole = context.RoleMaster.FirstOrDefault(r => r.RoleName == "SuperAdmin");
+                if (superAdminRole == null)
+                {
+                    Console.WriteLine("❌ SuperAdmin role not found.");
+                    return;
+                }
+
+                var allEnumPermissions = Enum.GetNames(typeof(Permissions));
+                var existingPermissions = context.Permissions.Select(p => p.PermissionName).ToList();
+
+                foreach (var perm in allEnumPermissions.Except(existingPermissions))
+                {
+                    context.Permissions.Add(new Permission { PermissionName = perm });
+                    Console.WriteLine($"✅ Added permission: {perm}");
+                }
+
+                context.SaveChanges();
+
+                var allPermissions = context.Permissions.ToList();
+                var existingRolePermissions = context.RolePermissions
+                    .Where(rp => rp.RoleId == superAdminRole.RoleId)
+                    .Select(rp => rp.PermissionId)
+                    .ToHashSet();
+
+                foreach (var permission in allPermissions)
+                {
+                    if (!existingRolePermissions.Contains(permission.PermissionId))
+                    {
+                        context.RolePermissions.Add(new RolePermission
+                        {
+                            RoleId = superAdminRole.RoleId,
+                            PermissionId = permission.PermissionId
+                        });
+                        Console.WriteLine($"🔗 Assigned {permission.PermissionName} to SuperAdmin");
+                    }
+                }
+
+                context.SaveChanges();
+                Console.WriteLine("✅ All permissions initialized and assigned to SuperAdmin.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error initializing permissions: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 }

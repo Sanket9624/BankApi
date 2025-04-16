@@ -11,6 +11,5 @@ public interface IUserRepository
      Task<bool> RequestWithdrawAsync(int accountId, decimal amount, string description, TransactionStatus status);
      Task<bool> RequestTransferAsync(int senderAccountId, string receiverAccountNumber, decimal amount, string description,TransactionStatus status);
     Task<decimal> GetBalanceAsync(int accountId);
-    Task<List<Transactions>> GetTransactionHistoryAsync(int accountId);
     Task<List<Transactions>> GetCustomeTransactionHistoryAsync(int accountId, DateTime? startDate, DateTime? endDate, TransactionType? type,TransactionStatus? status);
 }

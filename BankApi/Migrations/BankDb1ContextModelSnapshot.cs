@@ -42,15 +42,71 @@ namespace BankApi.Migrations
                     b.Property<decimal>("Balance")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("AccountId");
 
+                    b.HasIndex("BranchId");
+
                     b.HasIndex("UserId")
                         .IsUnique();
 
                     b.ToTable("Account");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.Bank", b =>
+                {
+                    b.Property<int>("BankId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BankId"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("BankId");
+
+                    b.ToTable("Banks");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.Branch", b =>
+                {
+                    b.Property<int>("BranchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BranchId"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("BankId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("BranchId");
+
+                    b.HasIndex("BankId");
+
+                    b.ToTable("Branches");
                 });
 
             modelBuilder.Entity("BankApi.Entities.OtpVerifications", b =>
@@ -78,27 +134,21 @@ namespace BankApi.Migrations
                     b.ToTable("OtpVerifications");
                 });
 
-            modelBuilder.Entity("BankApi.Entities.PasswordResetToken", b =>
+            modelBuilder.Entity("BankApi.Entities.Permission", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("PermissionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
 
-                    b.Property<DateTime>("ExpiryTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Token")
+                    b.Property<string>("PermissionName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.HasKey("PermissionId");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("PasswordResetTokens");
+                    b.ToTable("Permissions");
                 });
 
             modelBuilder.Entity("BankApi.Entities.RoleMaster", b =>
@@ -134,6 +184,21 @@ namespace BankApi.Migrations
                             RoleId = 3,
                             RoleName = "Customer"
                         });
+                });
+
+            modelBuilder.Entity("BankApi.Entities.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("BankApi.Entities.Transactions", b =>
@@ -199,6 +264,9 @@ namespace BankApi.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -258,6 +326,8 @@ namespace BankApi.Migrations
 
                     b.HasKey("UserId");
 
+                    b.HasIndex("BranchId");
+
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users");
@@ -265,13 +335,32 @@ namespace BankApi.Migrations
 
             modelBuilder.Entity("BankApi.Entities.Account", b =>
                 {
+                    b.HasOne("BankApi.Entities.Branch", "Branch")
+                        .WithMany("Accounts")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BankApi.Entities.Users", "Users")
                         .WithOne("Account")
                         .HasForeignKey("BankApi.Entities.Account", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Branch");
+
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.Branch", b =>
+                {
+                    b.HasOne("BankApi.Entities.Bank", "Bank")
+                        .WithMany("Branches")
+                        .HasForeignKey("BankId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Bank");
                 });
 
             modelBuilder.Entity("BankApi.Entities.OtpVerifications", b =>
@@ -283,6 +372,25 @@ namespace BankApi.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.RolePermission", b =>
+                {
+                    b.HasOne("BankApi.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BankApi.Entities.RoleMaster", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("BankApi.Entities.Transactions", b =>
@@ -304,17 +412,44 @@ namespace BankApi.Migrations
 
             modelBuilder.Entity("BankApi.Entities.Users", b =>
                 {
+                    b.HasOne("BankApi.Entities.Branch", "Branch")
+                        .WithMany("Users")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BankApi.Entities.RoleMaster", "RoleMaster")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("RoleMaster");
                 });
 
+            modelBuilder.Entity("BankApi.Entities.Bank", b =>
+                {
+                    b.Navigation("Branches");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.Branch", b =>
+                {
+                    b.Navigation("Accounts");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("BankApi.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("BankApi.Entities.RoleMaster", b =>
                 {
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("Users");
                 });
 

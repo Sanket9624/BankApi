@@ -65,6 +65,7 @@ namespace BankApi.Services
             if (user.TwoFactorEnabled)
             {
                 await SendVerificationEmailAsync(user.Email, user.UserId);
+                Console.WriteLine("message send:");
                 return "OTP Sent for Verification. Please verify OTP to proceed.";
             }
 
@@ -123,14 +124,19 @@ namespace BankApi.Services
             // Open signup page and trigger OTP modal automatically
             string verificationLink = $"http://localhost:5173/signup?otp={otp}&email={email}";
 
-            string emailBody = $@"
-        <p>Click the link below to verify your email:</p>
-        <p><a href='{verificationLink}' target='_blank'>{verificationLink}</a></p>
-        <p>If the link does not work, copy and paste it into your browser.</p>";
+            string emailBody = $"Your otp is {otp}";
 
+            Console.WriteLine("emailBody",emailBody);
             bool isEmailSent = await _emailService.SendEmailAsync(email, "Verify Your Email", emailBody);
-
-            return isEmailSent ? "Verification email sent successfully" : "Failed to send verification email";
+            if (isEmailSent)
+            {
+                Console.WriteLine("Verification email sent successfully");
+            }
+            else
+            {
+                Console.WriteLine("Failed to send verification email");
+            }
+                return isEmailSent ? "Verification email sent successfully" : "Failed to send verification email";
         }
 
         //2Verify Otp For Different Cases

@@ -1,12 +1,12 @@
 ﻿using BankApi.Dto;
+using BankApi.Entities;
+using BankApi.Enums;
+using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using BankApi.Entities;
 
-[Authorize(Policy = "CustomerOnly")]
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
@@ -20,6 +20,7 @@ public class UserController : ControllerBase
 
     private int GetUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
 
+    [HasPermission(Permissions.MakeDeposit)]
     [HttpPost("deposit")]
     public async Task<IActionResult> Deposit([FromBody] AmountRequestDto request)
     {
@@ -32,6 +33,7 @@ public class UserController : ControllerBase
         return Ok(new { Message = "Deposit successful" });
     }
 
+    [HasPermission(Permissions.MakeWithdrawal)]
     [HttpPost("withdraw")]
     public async Task<IActionResult> Withdraw([FromBody] AmountRequestDto request)
     {
@@ -44,6 +46,7 @@ public class UserController : ControllerBase
         return Ok(new { Message = "Withdrawal successful" });
     }
 
+    [HasPermission(Permissions.MakeTransfer)]
     [HttpPost("transfer")]
     public async Task<IActionResult> Transfer([FromBody] TransferRequestDto request)
     {
@@ -56,6 +59,7 @@ public class UserController : ControllerBase
         return Ok(new { Message = "Transfer successful" });
     }
 
+    [HasPermission(Permissions.ViewBalance)]
     [HttpGet("balance")]
     public async Task<IActionResult> GetBalance()
     {
@@ -64,19 +68,12 @@ public class UserController : ControllerBase
         return Ok(balanceDto);
     }
 
+    [HasPermission(Permissions.ViewTransactions)]
     [HttpGet("transactions")]
-    public async Task<IActionResult> GetTransactionHistory()
+    public async Task<IActionResult> GetCustomTransactionHistory(DateTime? startDate, DateTime? endDate, TransactionType? type, TransactionStatus? status)
     {
         var userId = GetUserId();
-        var transactions = await _bankingService.GetTransactionHistoryAsync(userId);
-        return Ok(transactions);
-    }
-
-    [HttpGet("customTransactions")]
-    public async Task<IActionResult> GetCustomTransactionHistory(DateTime? startDate, DateTime? endDate, TransactionType? type,TransactionStatus? status)
-    {
-        var userId = GetUserId();
-        var transactions = await _bankingService.GetCustomTransactionHistoryAsync(userId, startDate, endDate, type,status);
+        var transactions = await _bankingService.GetCustomTransactionHistoryAsync(userId, startDate, endDate, type, status);
         return Ok(transactions);
     }
 }

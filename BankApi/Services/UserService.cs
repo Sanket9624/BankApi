@@ -42,31 +42,6 @@ public class UserService : IUserService
         return new BalanceDto { Balance = balance };
     }
 
-    public async Task<List<TransactionDto>> GetTransactionHistoryAsync(int userId)
-    {
-        var user = await _repository.GetUserByIdAsync(userId);
-        if (user?.Account == null) return new List<TransactionDto>();
-
-        var transactions = await _repository.GetTransactionHistoryAsync(user.Account.AccountId);
-
-        return transactions.Select(t => new TransactionDto
-        {
-            TransactionId = t.TransactionId,
-            Amount = t.Amount,
-            Type = t.Type,
-            TransactionDate = t.TransactionDate,
-            Description = t.Description,
-            Status = t.Status, // Include status to show if it's pending, approved, or rejected
-            Reason = t.Status == TransactionStatus.Rejected ? t.Reason : null,
-            ReceiverName = t.ReceiverAccount?.Users != null
-                ? $"{t.ReceiverAccount.Users.FirstName} {t.ReceiverAccount.Users.LastName}"
-                : null,
-            SenderName = t.SenderAccount?.Users != null
-                ? $"{t.SenderAccount.Users.FirstName} {t.SenderAccount.Users.LastName}"
-                : null
-        }).ToList();
-    }
-
     public async Task<List<TransactionDto>> GetCustomTransactionHistoryAsync(int userId, DateTime? startDate, DateTime? endDate, TransactionType? type,TransactionStatus? status)
     {
         var user = await _repository.GetUserByIdAsync(userId);

@@ -1,5 +1,6 @@
 ﻿using BankApi.Dto;
 using BankApi.Dto.Request;
+using BankApi.Enums;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +59,7 @@ public class AuthController : ControllerBase
     }
 
     //Get Personal Details
-    [Authorize(Policy = "AllUsers")]
+    [HasPermission(Permissions.ViewPersonalDetails)]
     [HttpGet("me")]
     public async Task<IActionResult> GetUser()
     {
@@ -120,7 +121,7 @@ public class AuthController : ControllerBase
 
 
     //2fa enable
-    [Authorize(Policy = "AllUsers")]
+    [HasPermission(Permissions.TwoFactorStatus)]
     [HttpPost("toggle-2fa")]
     public async Task<IActionResult> ToggleTwoFactor([FromBody] TwoFactorToggleDto twoFactorDto)
     {
@@ -136,7 +137,7 @@ public class AuthController : ControllerBase
         }
     }
     //2fa detail
-    [Authorize(Policy = "AllUsers")]
+    [HasPermission(Permissions.TwoFactorStatus)]
     [HttpGet("two-factor-status")]
     public async Task<IActionResult> GetTwoFactorStatus()
     {

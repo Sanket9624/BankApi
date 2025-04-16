@@ -1,6 +1,6 @@
 ﻿namespace BankApi.Entities
 {
-    public class UnverifiedUsers
+    public class CustomerAccountDetails
     {
     }
 }

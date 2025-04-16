@@ -11,6 +11,7 @@ namespace BankApi.Entities
         public string RoleName { get; set; }
 
         public ICollection<Users> Users { get; set; }
+        public ICollection<RolePermission> RolePermissions { get; set; }
     }
 
 }

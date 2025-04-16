@@ -1,5 +1,5 @@
-﻿using System.Transactions;
-using BankApi.Dto;
+﻿using BankApi.Dto;
+using BankApi.Enums;
 using BankApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BankingManagementSystem.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Policy = "SuperAdminOrBankManager")]
+    [Authorize]
     [ApiController]
     public class BankManagerController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace BankingManagementSystem.Controllers
             _bankManagerService = bankManagerService;
         }
 
+        [HasPermission(Permissions.BankSummary)]
         [HttpGet("summary")]
         public async Task<IActionResult> GetBankSummary()
         {
@@ -35,6 +36,7 @@ namespace BankingManagementSystem.Controllers
             }
         }
 
+        [HasPermission(Permissions.ViewUsers)]
         [HttpGet("user-account/{userId}")]
         public async Task<IActionResult> GetUserAccountDetails(int userId)
         {
@@ -52,6 +54,7 @@ namespace BankingManagementSystem.Controllers
             }
         }
 
+        [HasPermission(Permissions.ViewUsers)]
         [HttpGet("account/{accountNumber}")]
         public async Task<IActionResult> GetUserDetailsByAccountNumber(string accountNumber)
         {
@@ -64,11 +67,12 @@ namespace BankingManagementSystem.Controllers
                 return Ok(user);
             }
             catch (Exception ex)
-            {
+            { 
                 return StatusCode(500, $"Failed to retrieve user details: {ex.Message}");
             }
         }
 
+        [HasPermission(Permissions.ViewUsers)]
         [HttpGet("email/{email}")]
         public async Task<IActionResult> GetUserDetailsByEmail(string email)
         {
@@ -86,13 +90,15 @@ namespace BankingManagementSystem.Controllers
             }
         }
 
-      [HttpGet("total-accounts")]
+        [HasPermission(Permissions.ViewUsers)]
+        [HttpGet("total-accounts")]
         public async Task<IActionResult> GetTotalAccounts()
         {
             var result = await _bankManagerService.GetTotalAccounts();
             return Ok(result);
         }
 
+        [HasPermission(Permissions.GetTransactions)]
         [HttpGet("transactions")]
         public async Task<IActionResult> GetTransactions(
             [FromQuery] int? userId,
@@ -104,7 +110,5 @@ namespace BankingManagementSystem.Controllers
             var transactions = await _bankManagerService.GetTransactions(userId, transactionType, status, startDate, endDate);
             return Ok(transactions);
         }
-
-
     }
 }

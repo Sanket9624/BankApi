@@ -103,15 +103,6 @@ public class UserRepository : IUserRepository
         return account?.Balance ?? 0;
     }
 
-    public async Task<List<Transactions>> GetTransactionHistoryAsync(int accountId)
-    {
-        return await _context.Transactions
-            .Where(t => t.SenderAccountId == accountId || t.ReceiverAccountId == accountId)
-            .Include(t => t.ReceiverAccount.Users)
-            .Include(t => t.SenderAccount.Users)
-            .OrderByDescending(t => t.TransactionDate)
-            .ToListAsync();
-    }
 
     public async Task<List<Transactions>> GetCustomeTransactionHistoryAsync(int accountId, DateTime? startDate, DateTime? endDate, TransactionType? type, TransactionStatus? status)
     {

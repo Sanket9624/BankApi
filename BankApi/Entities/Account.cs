@@ -17,7 +17,7 @@ namespace BankApi.Entities
         public int AccountId { get; set; }
 
         [Required, MaxLength(16)]
-        public string AccountNumber { get; set; } // Will be set from Service
+        public string AccountNumber { get; set; }
 
         [Required]
         public int UserId { get; set; }
@@ -28,10 +28,17 @@ namespace BankApi.Entities
         [Required]
         public decimal Balance { get; set; }
 
-        [Column(TypeName = "nvarchar(10)")] // Store Enum as String
+        [Column(TypeName = "nvarchar(10)")]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         [Required]
         public AccountType AccountType { get; set; }
 
+        // 🔥 New: BranchId + Navigation
+        [Required]
+        public int BranchId { get; set; }
+
+        [ForeignKey("BranchId")]
+        public Branch Branch { get; set; }
     }
+
 }

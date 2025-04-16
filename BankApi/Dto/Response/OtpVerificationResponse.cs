@@ -1,4 +1,4 @@
-﻿namespace BankApi.Services
+﻿namespace BankApi.Dto.Response
 {
     internal class OtpVerificationResponse
     {
